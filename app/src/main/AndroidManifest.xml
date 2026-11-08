@@ -11,8 +11,7 @@
     <!-- ★2026-11-03 计划到期 / 备份提醒（对齐 Web 版通知）。Android 13+ 需运行时授权 -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!--
-      ★2026-11-03 保存图片到相册（分享卡 / 收款码）。
+    <!-- ★2026-11-03 保存图片到相册（分享卡 / 收款码）。
         Android 10+ 走 MediaStore，**不需要任何权限**；
         Android 9 及以下只能写公共目录，需要这条 —— 用 maxSdkVersion 限死 28，
         新系统上不会出现在权限列表里（免得用户以为要读相册）。
@@ -20,6 +19,16 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
+    <!--
+      ★★2026-11-09 应用内更新必需（Android 8.0 起）。
+        没有这条，下载完的 APK 调 ACTION_VIEW 会被系统直接拒绝 ——
+        表现为"点更新没反应"，而且不抛异常（只是 startActivity 静默失败）。
+
+        ⚠️ 这是**普通权限**（声明即生效，不弹框），但用户还必须单独授权
+        "安装未知应用"（设置 → 特殊权限）。代码里用 canRequestPackageInstalls()
+        检查并跳转授权页，见 ApkDownloader.install()。
+    -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:allowBackup="false"

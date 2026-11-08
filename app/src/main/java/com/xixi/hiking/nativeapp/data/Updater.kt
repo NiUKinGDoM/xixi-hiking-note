@@ -31,11 +31,23 @@ import java.util.concurrent.TimeUnit
 object Updater {
 
     /**
-     * 发布列表（不是 /latest —— 必须自己挑哪一条属于原生版）。
+     * 发布列表（不是 /latest —— 要自己挑哪一条属于本应用）。
      *
-     * ★以后原生版有自己的仓库时，只改这一个常量即可。
+     * ★★2026-11-09 应用搬进独立仓库 `NiUKinGDoM/xixi-hiking-note`。
+     *   以前和网页版混在 `xixi-hiking` 里，只能拉列表再按资产名筛，
+     *   还踩过"把网页版更新推给 App 用户"的坑。现在独立了，列表里全是自己人。
+     *
+     * ★但**不能把旧地址直接删掉**：已经装在用户手机上的 v1.1.0.3 及更早版本，
+     *   代码里硬编码的还是旧仓库。如果新版本只发新仓库，那些人的"检查更新"
+     *   永远查旧仓库 → 永远"已是最新"，而且**不会报错**，静默断供。
+     *   ⇒ 过渡期两个源都查，取版本更高的那条。等确认所有用户都升过一轮
+     *     （自己手机 + 朋友），再删 [API_LEGACY]。
      */
-    private const val RELEASES_API =
+    private const val API_PRIMARY =
+        "https://api.github.com/repos/NiUKinGDoM/xixi-hiking-note/releases?per_page=30"
+
+    /** 过渡期兜底：老仓库。留着是为了让还没升级的老版本能被"带上来" */
+    private const val API_LEGACY =
         "https://api.github.com/repos/NiUKinGDoM/xixi-hiking/releases?per_page=30"
 
     /**
@@ -92,13 +104,30 @@ object Updater {
         //   ⇒ App 侧**只认正式版**，预发布永远不推（哪怕它版本号更高）。
         //   ghrelease.py 仍然可以发 pre-release：那是"先传上去但先不推"，
         //   想验就自己去 GitHub 下载，验完 promote 成正式版，所有人才会收到。
-        val allowBeta = false
+        //
         // ★2026-11-05 用户：「保证离线时候不出现任何报错」——
         //   离线时直接返回 Offline（中性状态），不发请求、不报"检查失败"。
         if (!Net.isOnline(ctx)) return Result.Offline
+
+        // ① 主源（新仓库）
+        val primary = query(API_PRIMARY)
+        if (primary is Result.Update) return primary
+
+        // ② 主源没有更新 / 失败 → 再问一次老仓库（过渡期兜底，见 API_LEGACY 注释）
+        val legacy = query(API_LEGACY)
+        return when {
+            legacy is Result.Update -> legacy
+            primary is Result.Failed && legacy is Result.Failed -> Result.Failed
+            else -> Result.UpToDate
+        }
+    }
+
+    /** 查一个仓库的发布列表，找出版本最高且比本机新的那条 */
+    private fun query(apiUrl: String): Result {
+        val allowBeta = false
         val releases: JSONArray = try {
             val req = Request.Builder()
-                .url(RELEASES_API)
+                .url(apiUrl)
                 .header("Accept", "application/vnd.github+json")
                 .build()
             client.newCall(req).execute().use { res ->
@@ -121,7 +150,7 @@ object Updater {
 
             val tag = o.optString("tag_name", "")
             val name = o.optString("name", "")
-            val apkUrl = nativeApkUrl(o) ?: continue   // ← 不是原生版就跳过
+            val apkUrl = nativeApkUrl(o) ?: continue   // ← 没有安装包就跳过
             if (tag.isBlank()) continue
 
             // 版本不比本机新就继续往上找（列表是按时间倒序的，理论上第一条就结束）
@@ -187,10 +216,10 @@ object Updater {
     private fun nums(s: String): List<Int> =
         Regex("\\d+").findAll(s).mapNotNull { it.value.toIntOrNull() }.toList()
 
-    /** 打开下载页（浏览器），不直接下 APK —— 避免「安装未知来源」的坑 */
+    /** 打开下载页（浏览器）—— 只在应用内下载失败时兜底用 */
     fun openDownload(ctx: Context, url: String) {
         try {
-            val u = url.ifBlank { "https://github.com/NiUKinGDoM/xixi-hiking/releases" }
+            val u = url.ifBlank { "https://github.com/NiUKinGDoM/xixi-hiking-note/releases" }
             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(u)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })

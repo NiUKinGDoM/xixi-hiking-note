@@ -51,7 +51,12 @@ import urllib.error
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_REPO = "NiUKinGDoM/xixi-hiking"
+# ★2026-11-09 应用独立仓库：NiUKinGDoM/xixi-hiking-note
+#   老的 NiUKinGDoM/xixi-hiking 是**网页版**的仓库，App 只在过渡期往那边补发一次
+#   （原因见 app/src/.../data/Updater.kt 的 API_LEGACY 注释：老版本 App 硬编码了旧地址）。
+#   发到旧仓库时显式传 --repo NiUKinGDoM/xixi-hiking。
+DEFAULT_REPO = "NiUKinGDoM/xixi-hiking-note"
+LEGACY_REPO = "NiUKinGDoM/xixi-hiking"
 API = "https://api.github.com"
 UPLOAD = "https://uploads.github.com"
 TAG_RX = re.compile(r"^v\d+\.\d+\.\d+\.\d+$")

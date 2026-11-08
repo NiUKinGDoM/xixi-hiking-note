@@ -68,6 +68,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.xixi.hiking.nativeapp.ui.liquid.liquidGlassChip
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -924,20 +925,44 @@ fun SettingsScreen(
                 //   原来它排在最前面（紧跟照片占用），现在按用户要求挪到开关组的最后。
                 // ★★2026-11-03 用户：「设置页杂项里的检测更新去哪了？」
                 //   之前是被故意摘掉的 —— 那个版本查的是**网页版仓库**，会报出网页版的版本号，
-                //   一比就"有新版本"，误导。现在 Updater 指向原生版的 releases，可以放回来了。
+                //   一比就"有新版本"，误导。现在 Updater 指向本应用自己的 releases，可以放回来了。
+                //
+                // ★★2026-11-09 应用内更新：这一行同时当**下载状态指示器**用。
+                //   弹窗可以关掉，下载在后台继续；回到设置页还能看见进行到哪了。
+                val dl = com.xixi.hiking.nativeapp.data.ApkDownloader.state.collectAsState().value
                 SettingsItem(
                     icon = Icons.Filled.SystemUpdate,
                     title = "检测更新",
-                    desc = if (checkingUpdate) "正在检查…" else "查一下新版本",
+                    desc = when (val s = dl) {
+                        is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Downloading ->
+                            if (s.total > 0) "正在下载 ${(s.done * 100 / s.total).toInt()}%"
+                            else "正在下载…"
+                        is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Installing -> "正在安装…"
+                        is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Ready -> "已下载，可安装"
+                        is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Failed -> "上次下载失败"
+                        else -> if (checkingUpdate) "正在检查…" else "应用内直接更新"
+                    },
                     topGap = 10,
                     onClick = {
                         if (checkingUpdate) return@SettingsItem
+                        // 下载好了就直接装，不用再查一遍
+                        val ready = dl as? com.xixi.hiking.nativeapp.data.ApkDownloader.State.Ready
+                        if (ready != null) {
+                            com.xixi.hiking.nativeapp.data.ApkDownloader
+                                .installCached(context, ready.version)
+                            return@SettingsItem
+                        }
+                        // 正在下载 → 只提示，别打断
+                        if (dl is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Downloading) {
+                            toast = "正在下载，稍等"
+                            return@SettingsItem
+                        }
                         checkingUpdate = true
                         ioScope().launch {
                             // ★★★2026-11-03 三态结果（用户：「检测更新不允许检测到 web 版的更新」）
                             //   以前只有「有更新 / 检查失败」两态，而"版本号一样"是被
-                            //   Updater 内部当失败吞掉的。现在 Updater 只挑**原生版**发布，
-                            //   没有原生版更新时明确返回 UpToDate，这里如实说"已是最新"。
+                            //   Updater 内部当失败吞掉的。现在 Updater 只挑**本应用**发布，
+                            //   没有更新时明确返回 UpToDate，这里如实说"已是最新"。
                             when (val res = com.xixi.hiking.nativeapp.data.Updater.check(context)) {
                                 is com.xixi.hiking.nativeapp.data.Updater.Result.Update -> {
                                     updateRelease = res.release
@@ -1342,9 +1367,10 @@ fun SettingsScreen(
         UpdateAvailableDialog(
             hazeState = hazeState,
             release = r,
-            onDownload = {
-                com.xixi.hiking.nativeapp.data.Updater.openDownload(context, r.apkUrl)
-                updateRelease = null
+            // ★2026-11-09 不再跳浏览器：应用内下载 → 校验签名 → 拉起系统安装器。
+            //   ★故意**不关弹窗**：进度和失败原因就地显示，关掉就什么也看不到了。
+            onStart = {
+                com.xixi.hiking.nativeapp.data.ApkDownloader.start(context, r)
             },
             onDismiss = { updateRelease = null }
         )

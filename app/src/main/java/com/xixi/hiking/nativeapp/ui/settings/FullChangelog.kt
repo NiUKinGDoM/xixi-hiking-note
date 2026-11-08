@@ -12,6 +12,10 @@ package com.xixi.hiking.nativeapp.ui.settings
  * 条目写"用户看得见的变化"，不写内部实现。
  */
 val NativeChangelog: List<Pair<String, String>> = listOf(
+    "v1.1.0.5" to
+        "【优化】\n" +
+        "- 应用内直接更新：下载校验签名后拉起安装器，仓库迁到独立地址\n",
+
     "v1.1.0.4" to
         "【优化】\n" +
         "- 顶栏去掉白膜、记录详情按钮互换、正式更名徒步小记、条款按实更新\n",

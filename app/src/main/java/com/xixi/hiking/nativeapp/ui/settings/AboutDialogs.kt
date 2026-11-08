@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -51,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -761,9 +763,15 @@ private fun PayButton(
 fun UpdateAvailableDialog(
     hazeState: HazeState,
     release: Updater.Release,
-    onDownload: () -> Unit,
+    /** 开始下载（下载、校验、拉安装器都在 ApkDownloader 里串好了） */
+    onStart: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // ★★2026-11-09 从"跳浏览器下载"改成**应用内下载安装**（对齐网页版那套）。
+    //   状态住在 ApkDownloader 这个单例里，所以关掉弹窗也在继续下，
+    //   再打开还能看到进度 —— 放在 remember 里一关就断了。
+    val st by com.xixi.hiking.nativeapp.data.ApkDownloader.state.collectAsState()
+
     GlassOverlay(hazeState = hazeState, onDismiss = onDismiss, maxWidthFraction = 0.92f, corner = 20) {
         Column(Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -793,7 +801,7 @@ fun UpdateAvailableDialog(
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "下载后点开安装",
+                "下载完成后按系统提示安装",
                 fontSize = 12.sp, lineHeight = 17.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -815,13 +823,68 @@ fun UpdateAvailableDialog(
                     )
                 }
             }
+
+            // ── 下载进度（只在下载中出现）──
+            val downloading = st as? com.xixi.hiking.nativeapp.data.ApkDownloader.State.Downloading
+            if (downloading != null) {
+                Spacer(Modifier.height(12.dp))
+                val done = downloading.done
+                val total = downloading.total
+                // total <= 0：服务端没给 Content-Length（chunked），只能用已下载大小说话
+                val fraction = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                ) {
+                    if (fraction > 0f) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth(fraction)
+                                .fillMaxHeight()
+                                .background(com.xixi.hiking.nativeapp.ui.theme.AccentIndigo)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    if (total > 0) {
+                        "正在下载 ${(done * 100 / total).toInt()}% · " +
+                            "${"%.1f".format(done / 1048576f)}/${"%.1f".format(total / 1048576f)} MB"
+                    } else {
+                        "正在下载 ${"%.1f".format(done / 1048576f)} MB"
+                    },
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            (st as? com.xixi.hiking.nativeapp.data.ApkDownloader.State.Failed)?.let { f ->
+                Spacer(Modifier.height(8.dp))
+                Text(f.reason, fontSize = 11.5.sp, color = Color(0xFFDC2626))
+            }
+
             Spacer(Modifier.height(12.dp))
+            val busy = downloading != null ||
+                st is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Installing
             Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 Box(Modifier.weight(1f)) {
                     GlassButton("稍后再说", onClick = onDismiss)
                 }
                 Box(Modifier.weight(1f)) {
-                    GlassButton("去下载", onClick = onDownload, primary = true)
+                    val label = when {
+                        downloading != null -> "下载中…"
+                        st is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Installing -> "正在安装…"
+                        st is com.xixi.hiking.nativeapp.data.ApkDownloader.State.Failed -> "重试"
+                        else -> "立即更新"
+                    }
+                    GlassButton(
+                        label,
+                        onClick = onStart,
+                        primary = !busy,
+                        enabled = !busy
+                    )
                 }
             }
         }
