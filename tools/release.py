@@ -1,15 +1,25 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-一键发版（原生版）
+一键发版（徒步小记 Android）
 
-一条命令做完「升版本 → 门禁 → 打包 → 体检 → 拷到桌面并规范命名」。
+一条命令做完「升版本 → 门禁 → 打包 → 体检 → 拷桌面 → 上传 Release」。
 
 用法：
-    python tools/release.py                       # 升一版并发布
-    python tools/release.py --note "顶栏羽化"       # 顺带写更新日志
-    python tools/release.py --no-bump             # 不升版本，重打当前版
-    python tools/release.py --build-only          # 只打包+体检，不跑门禁（调试用）
+    python tools/release.py --note "顶栏羽化"          # 升一版 + 门禁 + 出包 + 自动发布
+    python tools/release.py --no-bump --desc "重打包"  # 不升版本，重打当前版并发布
+    python tools/release.py --no-publish              # 只出包，不上传（临时拿包用）
+    python tools/release.py --build-only              # 只打包+体检，不跑门禁不上传（调试）
+
+★2026-11-09 用户：「以后更新后，自动发布 release，发布」
+  ⇒ 默认就把 upload + promote 串进来了，不用再单独敲 ghrelease。
+
+★过渡期双发（重要）：默认会同时发到
+    · NiUKinGDoM/xixi-hiking-note（主仓库）
+    · NiUKinGDoM/xixi-hiking（旧仓库）
+  原因见 app/src/.../data/Updater.kt 的 API_LEGACY 注释 —— 老版本 App
+  硬编码了旧仓库地址，只发新仓库会让它们**静默断供**。
+  等确认所有用户都升过一轮，加 `--no-legacy`（或把 LEGACY 开关关掉）。
 
 命名规范：徒步小记-v{versionName}-{描述}.apk，同时拷到桌面。
           （2026-11-07 应用定名前是 XiXi原生版-v…，历史产物保留原名不动）
@@ -20,6 +30,16 @@ import re
 import shutil
 import subprocess
 import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 仓库地址以 ghrelease.py 为准（那里是发布逻辑的唯一入口），这里只是取来用
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+try:
+    from ghrelease import DEFAULT_REPO, LEGACY_REPO  # type: ignore
+except Exception:  # 兜底：import 失败也不能让发版脚本挂掉
+    DEFAULT_REPO = "NiUKinGDoM/xixi-hiking-note"
+    LEGACY_REPO = "NiUKinGDoM/xixi-hiking"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -57,12 +77,62 @@ def version_name():
     return "1.%d.%d.%d" % ((i // 121) % 11, (i // 11) % 11, i % 11)
 
 
+def publish(env, tag, title, apk, notes, repo):
+    """
+    发到指定仓库：upload（默认 pre-release）→ promote（转正式版）。
+
+    ★★★这里**不能**用 subprocess 调 ghrelease.py —— 2026-11-09 踩过：
+      Windows 上把含中文的参数（`--apk 徒步小记-v1.1.0.5-更新.apk`、`--name 徒步小记 …`）
+      传给子进程，中文字符**全部丢失**，最终上传的资产名变成 `-v1.1.0.5-.apk`。
+      而 App 的更新检查是**按资产名里的「徒步小记」识别安装包**的 ——
+      名字一坏，用户永远收不到更新，界面上还显示"已是最新"，没有任何报错。
+
+    ⇒ 改成**同进程调用** `ghrelease.main(argv)`：字符串原样传，不经过命令行编码转换。
+      （ghrelease.main 用 sys.argv，所以这里临时改一下再还原。）
+
+    为什么要 promote：upload 默认打 prerelease 标记，而 App 端
+    `Updater.allowBeta = false` **只认正式版** —— 只 upload 不 promote，用户看不到。
+    """
+    print("\n── 发布到 %s ──" % repo)
+    import ghrelease  # 同目录，sys.path 已在文件顶部插好
+    old_argv = sys.argv
+    # ★资产名用纯 ASCII：`tuxiaoji-v1.1.0.5.apk`。
+    #   GitHub 会把中文资产名里的中文字符**整段剥掉**（徒步小记-v1.1.0.5-更新.apk
+    #   → -v1.1.0.5-.apk），而 App 正是按资产名认安装包的 —— 名字坏了就等于永远没更新。
+    #   桌面上给用户看的文件名仍然是中文，两者互不影响。
+    asset = "tuxiaoji-%s.apk" % tag
+    try:
+        sys.argv = [
+            "ghrelease", "upload",
+            "--tag", tag, "--apk", apk, "--name", title,
+            "--notes", notes, "--repo", repo,
+            "--asset-name", asset,
+        ]
+        if ghrelease.main() != 0:
+            print("✗ 上传失败")
+            return False
+        sys.argv = ["ghrelease", "promote", tag, "--repo", repo]
+        if ghrelease.main() != 0:
+            print("✗ 转为正式版失败（资产已上传，手动 promote 即可）")
+            return False
+        return True
+    except SystemExit:
+        # ghrelease 在没有 token 时会 sys.exit(2)，不能在发版流程里直接退出
+        print("✗ 发版中止：ghrelease 退出（多半是没有 GitHub token）")
+        return False
+    finally:
+        sys.argv = old_argv
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--note", default="")
     ap.add_argument("--desc", default="", help="APK 文件名里的描述，默认用 --note")
     ap.add_argument("--no-bump", action="store_true")
     ap.add_argument("--build-only", action="store_true")
+    # ★2026-11-09 默认自动发布；这两个开关是"临时只拿包"和"过渡期收尾"用的
+    ap.add_argument("--no-publish", action="store_true", help="只出包，不上传 Release")
+    ap.add_argument("--no-legacy", action="store_true", help="只发主仓库，不补发旧仓库")
     a = ap.parse_args()
 
     env = dict(os.environ)
@@ -133,6 +203,31 @@ def main():
     if os.path.isdir(DESKTOP):
         shutil.copyfile(out, os.path.join(DESKTOP, os.path.basename(out)))
         print("✓ 已拷到桌面")
+
+    # ⑥ 自动发布 Release
+    #   ★2026-11-09 用户：「以后更新后，自动发布 release，发布」
+    if a.no_publish:
+        print("\n（--no-publish：只出包，没有上传）")
+        return 0
+
+    tag = "v" + name
+    title = "徒步小记 " + tag
+    # Release 正文：优先用本次 --note，没写就取描述（更新日志本身已在 bump 时写进 App 内）
+    notes = (a.note or desc or "更新").strip()
+
+    ok = publish(env, tag, title, out, notes, DEFAULT_REPO)
+    if ok and not a.no_legacy:
+        # 过渡期补发旧仓库：让还装在 v1.1.0.3 及更早的用户能被带上来
+        ok = publish(env, tag, title, out, notes, LEGACY_REPO)
+    elif a.no_legacy:
+        print("（--no-legacy：只发了主仓库）")
+
+    if not ok:
+        print("\n✗ 发布没走完。APK 已经在桌面，可以重试：")
+        print("   python tools/ghrelease.py upload --tag %s --apk \"%s\" --name \"%s\"" % (tag, out, title))
+        return 1
+
+    print("\n✓ 发布完成：%s" % tag)
     return 0
 
 

@@ -53,14 +53,17 @@ object Updater {
     /**
      * 资产名里出现这些词才算「本应用的安装包」。
      *
-     * ★2026-11-07 应用定名「徒步小记」，发版产物改名为
-     * `徒步小记-vX.Y.Z-描述.apk` ⇒ 这里必须补上「徒步小记」，
-     * 否则**检查更新会永远报"没有新版本"**（资产名匹配不上，直接 continue）。
+     * ★★★2026-11-09 改成**英文资产名**（`tuxiaoji-v1.1.0.5.apk`），原因很硬：
+     *   GitHub 上传时会把中文资产名里的中文字符**整段剥掉** ——
+     *   `徒步小记-v1.1.0.5-更新.apk` 传上去变成 `-v1.1.0.5-.apk`（不是乱码，是消失）。
+     *   而这里正是靠资产名认安装包的 ⇒ 名字一坏，用户永远收不到更新，
+     *   界面上还显示"已是最新"，且**不报任何错**。
+     *   ⇒ 上传用纯 ASCII（release.py 的 --asset-name），桌面上的中文文件名不受影响。
      *
-     * 「原生」「native」两种旧标记保留 —— GitHub 上历史 release 的资产名还是老格式，
-     * 删掉的话那些版本就再也找不到了。
+     * 旧的三个标记保留：GitHub 上历史 release 的资产名还是中文/原生格式，
+     * 删了那些版本就再也找不到了。
      */
-    private val NATIVE_MARKERS = listOf("徒步小记", "原生", "native")
+    private val NATIVE_MARKERS = listOf("tuxiaoji", "徒步小记", "原生", "native")
 
     data class Release(
         val tag: String,

@@ -63,13 +63,41 @@ TAG_RX = re.compile(r"^v\d+\.\d+\.\d+\.\d+$")
 
 
 def token():
+    """
+    token 从哪来（按优先级）：
+      ① 环境变量 GITHUB_TOKEN / GH_TOKEN
+      ② 仓库根目录的 .gh_token（一行）
+      ③ **系统凭据管理器**里 git push 用的那一份
+
+    ★③ 是 2026-11-09 补的：这台机器上 token 存在 Windows 凭据管理器里，
+      git push 一直好用，但发版脚本读不到 —— 每次都要手动 export，
+      换机还得重配。既然 git 能取到，直接借它的。
+      （`git credential fill` 是只读查询，不会改动凭据。）
+    """
     for k in ("GITHUB_TOKEN", "GH_TOKEN"):
         v = os.environ.get(k)
-        if v:
+        if v and v.strip():
             return v.strip()
     f = os.path.join(ROOT, ".gh_token")
     if os.path.exists(f):
-        return io_read(f).strip()
+        v = io_read(f).strip()
+        if v:
+            return v
+    # ③ 系统凭据管理器
+    try:
+        import subprocess
+        p = subprocess.run(
+            ["git", "credential", "fill"],
+            input="protocol=https\nhost=github.com\n\n",
+            capture_output=True, text=True, timeout=10,
+        )
+        for line in (p.stdout or "").splitlines():
+            if line.startswith("password="):
+                v = line.split("=", 1)[1].strip()
+                if v:
+                    return v
+    except Exception:
+        pass
     print("✗ 没有 GitHub token。")
     print("  设环境变量 GITHUB_TOKEN=ghp_xxx，或把 token 写进 .gh_token（一行）。")
     print("  生成：GitHub → Settings → Developer settings → Personal access tokens → repo 权限")
@@ -111,12 +139,26 @@ def repo_of(args):
 
 
 def find_release(tok, repo, tag):
+    """
+    按 tag 找 release。
+
+    ★2026-11-09 先走**精确端点** `/releases/tags/{tag}`：
+      原来只拉 `/releases?per_page=100` 再遍历 —— 两个坑：
+        ① 旧仓库（网页版）有几百个 release，100 条封顶，老 tag 查不到；
+        ② 刚 upload 完立刻 promote 时，新条目**还没进列表**（GitHub 有短暂延迟），
+           于是报"找不到"，明明资产都传上去了。
+      精确端点直接按 tag 取，没有这两个问题。
+    """
+    st, r = call("GET", f"{API}/repos/{repo}/releases/tags/{tag}", tok)
+    if st == 200 and isinstance(r, dict):
+        return r
+    # 回退：列表扫描（兼容 tag 里含特殊字符、或端点不可用的情况）
     st, arr = call("GET", f"{API}/repos/{repo}/releases?per_page=100", tok)
     if st != 200 or not isinstance(arr, list):
         return None
-    for r in arr:
-        if r.get("tag_name") == tag:
-            return r
+    for x in arr:
+        if x.get("tag_name") == tag:
+            return x
     return None
 
 
@@ -187,7 +229,21 @@ def cmd_upload(repo, args):
             print(f"  已删同名旧资产 {a['name']}")
 
     data = open(apk, "rb").read()
-    fname = os.path.basename(apk)
+    # ★★★2026-11-09 资产名必须用纯 ASCII —— 这是踩出来的：
+    #   本地文件名是 `徒步小记-v1.1.0.5-更新.apk`，上传后 GitHub 上变成 `-v1.1.0.5-.apk`，
+    #   **中文字符被整段剥掉**（不是乱码，是消失）。即使已经 urllib.parse.quote 过也一样。
+    #   而 App 的更新检查靠资产名里的关键词认安装包 ⇒ 名字一坏，
+    #   用户永远收不到更新，还显示"已是最新"，并且不报错。
+    #   ⇒ 用 --asset-name 指定一个固定的英文名（release.py 传 tuxiaoji-vX.Y.Z.apk）。
+    fname = (
+        args[args.index("--asset-name") + 1]
+        if "--asset-name" in args
+        else os.path.basename(apk)
+    )
+    if not fname.isascii():
+        print(f"✗ 资产名必须是纯 ASCII（当前「{fname}」）")
+        print("  理由：GitHub 上传会把中文名里的中文字符剥掉，而 App 靠资产名识别安装包。")
+        return 2
     st, j = call(
         "POST", f"{UPLOAD}/repos/{repo}/releases/{rid}/assets?name={urllib.parse.quote(fname)}",
         tok, raw=data, content_type="application/vnd.android.package-archive"
