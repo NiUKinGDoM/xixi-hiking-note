@@ -45,6 +45,23 @@ object Updater {
         "https://api.github.com/repos/NiUKinGDoM/xixi-hiking-note/releases?per_page=30"
 
     /**
+     * ★★★2026-11-09 新增：版本清单（**主**检查源）
+     *
+     * 实测结论：手机直连 `api.github.com` 在国内基本不通 ——
+     * 本机 curl 三次全是 1ms 断连（HTTP=000），只有挂代理才通。
+     * 这就是"检测更新老是失败"的真正原因，不是代码问题。
+     *
+     * ⇒ 改读 jsDelivr 上的 `version.json`（仓库根的一个 1KB 静态文件）：
+     *    · 国内可直连（实测 1.3s），海外也快
+     *    · 发布脚本发完版会自动改写这个文件并 push，再调 purge 清缓存
+     *    · 拿不到时（CDN 故障/文件缺失）自动回退 GitHub API
+     *
+     * 文件格式见 `tools/release.py` 的 write_version_json()。
+     */
+    private const val VERSION_JSON =
+        "https://cdn.jsdelivr.net/gh/NiUKinGDoM/xixi-hiking-note@main/version.json"
+
+    /**
      * 资产名里出现这些词才算「本应用的安装包」。
      *
      * ★★★2026-11-09 改成**英文资产名**（`tuxiaoji-v1.1.0.5.apk`），原因很硬：
@@ -107,7 +124,49 @@ object Updater {
         if (!Net.isOnline(ctx)) return Result.Offline
 
         // ★2026-11-09 单一源（用户要求不搞双仓库，只看本仓库）
+        //
+        // ① 先读 jsDelivr 上的版本清单 —— 国内唯一稳定的一条路
+        jsonCheck()?.let { return it }
+        // ② CDN 不可用（网络/DNS/文件缺失）→ 退回 GitHub API
         return query(RELEASES_API)
+    }
+
+    /**
+     * 读 jsDelivr 上的 version.json。
+     *
+     * @return null = 这个源本身不可用（调用方去试下一个）；
+     *         UpToDate / Update = 源可用且给出了明确结论。
+     */
+    private fun jsonCheck(): Result? {
+        return try {
+            // 带上小时级时间戳：jsDelivr 对 @main 分支有最长 12h 缓存，
+            // 换 URL 能让它更倾向于回源（发布脚本还会主动 purge，双保险）。
+            val url = VERSION_JSON + "?t=" + (System.currentTimeMillis() / 3_600_000L)
+            val req = Request.Builder().url(url)
+                .header("Accept", "application/json")
+                .build()
+            client.newCall(req).execute().use { res ->
+                if (!res.isSuccessful) return null
+                val txt = res.body?.string() ?: return null
+                val o = JSONObject(txt)
+                val tag = o.optString("tag", "")
+                val apkUrl = o.optString("url", "")
+                if (tag.isBlank() || apkUrl.isBlank()) return null
+                if (!isNewer(tag, currentVersion())) return Result.UpToDate
+                Result.Update(
+                    Release(
+                        tag = tag,
+                        apkUrl = apkUrl,
+                        name = o.optString("version", ""),
+                        body = o.optString("notes", ""),
+                        isBeta = false
+                    )
+                )
+            }
+        } catch (e: Throwable) {
+            Log.i("hiking", "版本清单不可用，改用 GitHub API：${e.message}")
+            null
+        }
     }
 
     /** 查一个仓库的发布列表，找出版本最高且比本机新的那条 */

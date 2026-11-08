@@ -12,6 +12,14 @@ package com.xixi.hiking.nativeapp.ui.settings
  * 条目写"用户看得见的变化"，不写内部实现。
  */
 val NativeChangelog: List<Pair<String, String>> = listOf(
+    "v1.1.0.7" to
+        "【修复】\n" +
+        "- 检测更新不再一直失败：改从国内可直连的地址读版本信息，不再依赖 GitHub 接口\n" +
+        "\n" +
+        "【说明】\n" +
+        "- 国内直连 GitHub 接口经常连不上，这是网络原因不是 App 的问题；\n" +
+        "  现在换成走 CDN 上的版本清单，并保留 GitHub 作为备用\n",
+
     "v1.1.0.6" to
         "【新功能】\n" +
         "- 打开 App 自动检测新版本：有新版本直接提示，不用再去设置里手动点\n" +

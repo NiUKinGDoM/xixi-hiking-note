@@ -113,6 +113,54 @@ def changelog_for(version):
     return text.strip()
 
 
+def write_version_json(tag, name, apk_url, notes, version):
+    """
+    写 `version.json`（仓库根）—— App 的**主**更新检查源。
+
+    ★★2026-11-09 为什么要这个（实测结论）：
+      手机直连 `api.github.com` 在国内基本不通（本机 curl 三次全是 1ms 断连，
+      HTTP=000；只有走代理才通）。所以 App 里"检测更新老是失败"不是 bug，
+      是网络到不了。
+      ⇒ 检查更新改读 jsDelivr 上的这个静态文件（国内可直连，实测 1.3s），
+        GitHub API 降级为兜底。
+
+    文件很小（1KB），放仓库根就行，不影响 clone 体积。
+    """
+    import json as _json
+    import datetime
+    data = {
+        "tag": tag,
+        "version": version,
+        "apk": "tuxiaoji-%s.apk" % tag,
+        "url": apk_url,
+        "notes": notes,
+        "published": datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S%z"),
+    }
+    p = os.path.join(ROOT, "version.json")
+    with open(p, "w", encoding="utf-8", newline="\n") as f:
+        _json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print("✓ 已写 version.json（%s）" % tag)
+    return p
+
+
+def purge_jsdelivr():
+    """
+    让 jsDelivr 立刻重新拉 version.json。
+
+    jsDelivr 对 `@main` 分支引用最多缓存 12 小时 —— 不清的话，发完版
+    用户点"检测更新"还是旧版本，得等半天。purge 接口是公开的，一个 GET 就够。
+    """
+    url = ("https://purge.jsdelivr.net/gh/NiUKinGDoM/xixi-hiking-note"
+           "@main/version.json")
+    try:
+        import urllib.request
+        with urllib.request.urlopen(url, timeout=10) as r:
+            print("✓ 已刷新 jsDelivr 缓存（%s）" % r.status)
+    except Exception as e:
+        print("（jsDelivr 缓存刷新失败，最多 12 小时后自然生效：%s）" % e)
+
+
 def publish(env, tag, title, apk, notes, repo):
     """
     发到指定仓库：upload（默认 pre-release）→ promote（转正式版）。
@@ -169,6 +217,7 @@ def main():
     # ★2026-11-09 默认自动发布；这两个开关是"临时只拿包"和"过渡期收尾"用的
     ap.add_argument("--no-publish", action="store_true", help="只出包，不上传 Release")
     ap.add_argument("--desktop", action="store_true", help="额外拷一份到桌面（默认不拷，App 内直接更新）")
+    ap.add_argument("--no-push", action="store_true", help="只写 version.json，不自动 git push")
     a = ap.parse_args()
 
     env = dict(os.environ)
@@ -261,6 +310,20 @@ def main():
         print("\n✗ 发布没走完。APK 已经出包，可以重试：")
         print("   python tools/ghrelease.py upload --tag %s --apk \"%s\" --name \"%s\"" % (tag, out, title))
         return 1
+
+    # ⑦ 更新 version.json —— App 的检查更新**主源**（jsDelivr），并把新版推上去
+    #   为什么必须推：jsDelivr 读的是仓库里的文件，不 push 等于没更新。
+    apk_asset = "tuxiaoji-%s.apk" % tag
+    apk_url = "https://github.com/%s/releases/download/%s/%s" % (DEFAULT_REPO, tag, apk_asset)
+    write_version_json(tag, title, apk_url, notes, name)
+    purge_jsdelivr()
+    if not a.no_push:
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        if run(["git", "add", "version.json"], env=env) == 0:
+            # 内容没变时 commit 会返回非 0，这不算失败
+            run(["git", "commit", "-m", "版本清单：%s" % tag], env=env)
+            if run(["git", "push"], env=env) != 0:
+                print("⚠ version.json 已写好但没推上去 —— 手动 git push 一次，否则 App 读不到新版")
 
     print("\n✓ 发布完成：%s" % tag)
     return 0
