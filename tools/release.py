@@ -3,23 +3,22 @@
 """
 一键发版（徒步小记 Android）
 
-一条命令做完「升版本 → 门禁 → 打包 → 体检 → 拷桌面 → 上传 Release」。
+一条命令做完「升版本 → 门禁 → 打包 → 体检 → 上传 Release」。
 
 用法：
     python tools/release.py --note "顶栏羽化"          # 升一版 + 门禁 + 出包 + 自动发布
     python tools/release.py --no-bump --desc "重打包"  # 不升版本，重打当前版并发布
     python tools/release.py --no-publish              # 只出包，不上传（临时拿包用）
+    python tools/release.py --desktop                 # 额外拷一份到桌面（默认不拷）
     python tools/release.py --build-only              # 只打包+体检，不跑门禁不上传（调试）
 
 ★2026-11-09 用户：「以后更新后，自动发布 release，发布」
   ⇒ 默认就把 upload + promote 串进来了，不用再单独敲 ghrelease。
 
-★过渡期双发（重要）：默认会同时发到
-    · NiUKinGDoM/xixi-hiking-note（主仓库）
-    · NiUKinGDoM/xixi-hiking（旧仓库）
-  原因见 app/src/.../data/Updater.kt 的 API_LEGACY 注释 —— 老版本 App
-  硬编码了旧仓库地址，只发新仓库会让它们**静默断供**。
-  等确认所有用户都升过一轮，加 `--no-legacy`（或把 LEGACY 开关关掉）。
+★2026-11-09 用户：「以后更新后，自动发布 release」「不需要双仓库更新，
+  只需要更新本仓库就行了」⇒ 只发 `NiUKinGDoM/xixi-hiking-note` 一个仓库。
+  之前那套"过渡期同时发旧仓库"已经拆掉，旧仓库里的 App 发布也清理干净了
+  （那边只留网页版）。
 
 命名规范：徒步小记-v{versionName}-{描述}.apk，同时拷到桌面。
           （2026-11-07 应用定名前是 XiXi原生版-v…，历史产物保留原名不动）
@@ -36,10 +35,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # 仓库地址以 ghrelease.py 为准（那里是发布逻辑的唯一入口），这里只是取来用
 sys.path.insert(0, os.path.join(ROOT, "tools"))
 try:
-    from ghrelease import DEFAULT_REPO, LEGACY_REPO  # type: ignore
+    from ghrelease import DEFAULT_REPO  # type: ignore
 except Exception:  # 兜底：import 失败也不能让发版脚本挂掉
     DEFAULT_REPO = "NiUKinGDoM/xixi-hiking-note"
-    LEGACY_REPO = "NiUKinGDoM/xixi-hiking"
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
@@ -75,6 +73,44 @@ def version_name():
     vc = int(re.search(r"val\s+vc\s*=\s*(\d+)", gradle).group(1))
     i = vc - 1
     return "1.%d.%d.%d" % ((i // 121) % 11, (i // 11) % 11, i % 11)
+
+
+CHANGELOG_KT = os.path.join(
+    ROOT, "app", "src", "main", "java", "com", "xixi", "hiking", "nativeapp",
+    "ui", "settings", "FullChangelog.kt",
+)
+
+
+def changelog_for(version):
+    """
+    从 App 内置更新日志（FullChangelog.kt）里取出某个版本的正文。
+
+    ★2026-11-09 用户：「release 里的更新内容写好啊」——
+      之前 Release 正文只有一个「更新」两个字，等于没写。
+      而 App 里本来就有一份**面向用户**的日志（NativeChangelog），
+      同一个版本发到 GitHub 上却什么都没有，很荒唐。
+
+    取的是 `"v1.1.0.5" to "【优化】\\n" + "- ..."` 这样的 Kotlin 字符串拼接：
+    把该版本块里的所有双引号串按顺序拼起来，再把 \\n 还原成换行。
+    解析失败就返回空串（调用方会退回 --note）。
+    """
+    try:
+        src = open(CHANGELOG_KT, encoding="utf-8").read()
+    except Exception:
+        return ""
+    # 块边界：本版本 "vX" to 之后 → 下一个 "v" to 之前 / 列表结束
+    pat = r'"v%s"\s*to\s*(.*?)(?=\n\s*"v\d|\n\s*\))' % re.escape(version)
+    m = re.search(pat, src, re.S)
+    if not m:
+        return ""
+    # 只抓双引号串（忽略中间的 + 与换行缩进）
+    parts = re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1))
+    text = "".join(parts)
+    # 还原 Kotlin 转义里最常见的那几个
+    text = (text.replace("\\n", "\n")
+                .replace('\\"', '"')
+                .replace("\\\\", "\\"))
+    return text.strip()
 
 
 def publish(env, tag, title, apk, notes, repo):
@@ -132,7 +168,7 @@ def main():
     ap.add_argument("--build-only", action="store_true")
     # ★2026-11-09 默认自动发布；这两个开关是"临时只拿包"和"过渡期收尾"用的
     ap.add_argument("--no-publish", action="store_true", help="只出包，不上传 Release")
-    ap.add_argument("--no-legacy", action="store_true", help="只发主仓库，不补发旧仓库")
+    ap.add_argument("--desktop", action="store_true", help="额外拷一份到桌面（默认不拷，App 内直接更新）")
     a = ap.parse_args()
 
     env = dict(os.environ)
@@ -200,7 +236,10 @@ def main():
     out = os.path.join(ROOT, "徒步小记-v%s-%s.apk" % (name, desc))
     shutil.copyfile(APK, out)
     print("✓ 已生成 %s" % os.path.basename(out))
-    if os.path.isdir(DESKTOP):
+    # ★2026-11-09 用户：「软件内可以检测更新了，拷贝一份到桌面这一步就不需要了」
+    #   默认不再往桌面扔包 —— 以后直接在 App 里更新。
+    #   真要手动装（给朋友、没法联网时）加 --desktop。
+    if a.desktop and os.path.isdir(DESKTOP):
         shutil.copyfile(out, os.path.join(DESKTOP, os.path.basename(out)))
         print("✓ 已拷到桌面")
 
@@ -212,18 +251,14 @@ def main():
 
     tag = "v" + name
     title = "徒步小记 " + tag
-    # Release 正文：优先用本次 --note，没写就取描述（更新日志本身已在 bump 时写进 App 内）
-    notes = (a.note or desc or "更新").strip()
+    # Release 正文：**先用 App 内置日志里这一版的条目**（那是面向用户写的），
+    # 没有才退回 --note / 描述。★2026-11-09 用户：「release 里的更新内容写好啊」
+    notes = changelog_for(name) or (a.note or desc or "更新").strip()
 
     ok = publish(env, tag, title, out, notes, DEFAULT_REPO)
-    if ok and not a.no_legacy:
-        # 过渡期补发旧仓库：让还装在 v1.1.0.3 及更早的用户能被带上来
-        ok = publish(env, tag, title, out, notes, LEGACY_REPO)
-    elif a.no_legacy:
-        print("（--no-legacy：只发了主仓库）")
 
     if not ok:
-        print("\n✗ 发布没走完。APK 已经在桌面，可以重试：")
+        print("\n✗ 发布没走完。APK 已经出包，可以重试：")
         print("   python tools/ghrelease.py upload --tag %s --apk \"%s\" --name \"%s\"" % (tag, out, title))
         return 1
 

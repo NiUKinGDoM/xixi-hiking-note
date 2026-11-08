@@ -352,6 +352,36 @@ private fun AppRoot(
     val records by dao.observeAll().collectAsState(initial = emptyList())
     val plans by planDao.observeAll().collectAsState(initial = emptyList())
 
+    // ══════════════════════════════════════════════════════════════
+    //  ★★2026-11-09 启动自动检查更新（对齐 Web 版 autoCheckUpdateOnLaunch）
+    //
+    //  Web 版的行为：启动后延迟 1.5 秒查一次 GitHub → 有新版本弹大窗，
+    //  无新版**静默**，离线/失败**静默**。原生版之前只能去设置页手动点，
+    //  等于"更新功能只对会翻设置的人有效"。
+    //
+    //  克制原则（照抄 Web）：
+    //    · 只在**真有新版本**时弹窗
+    //    · 已是最新 / 离线 / 检查失败 → 一个字都不说
+    //      （一进 App 就报错是最招人烦的事，而且用户什么也做不了）
+    // ══════════════════════════════════════════════════════════════
+    var autoUpdateRelease by remember {
+        mutableStateOf<com.xixi.hiking.nativeapp.data.Updater.Release?>(null)
+    }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1500)      // 让首屏先渲染，别和启动加载抢
+        if (!com.xixi.hiking.nativeapp.data.Net.isOnline(context)) return@LaunchedEffect
+        val res = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                com.xixi.hiking.nativeapp.data.Updater.check(context)
+            } catch (t: Throwable) {
+                null                        // 检查更新绝不能影响启动
+            }
+        }
+        if (res is com.xixi.hiking.nativeapp.data.Updater.Result.Update) {
+            autoUpdateRelease = res.release
+        }
+    }
+
     // ★★2026-11-05 首启「从网页版搬过来」引导
     //
     //   背景：Android 上**不可能**用原生 APK 覆盖安装网页版（PWA 由 Chrome 生成 WebAPK，
@@ -763,6 +793,18 @@ private fun AppRoot(
 
         // ★轻提示（浮层最上层）：底栏之上，任何弹窗/页面都能用
         com.xixi.hiking.nativeapp.ui.AppToastHost()
+
+        // ★★2026-11-09 启动自动检查发现的新版本（见上方 LaunchedEffect）
+        autoUpdateRelease?.let { r ->
+            com.xixi.hiking.nativeapp.ui.settings.UpdateAvailableDialog(
+                hazeState = hazeState,
+                release = r,
+                onStart = {
+                    com.xixi.hiking.nativeapp.data.ApkDownloader.start(context, r)
+                },
+                onDismiss = { autoUpdateRelease = null }
+            )
+        }
 
         // ★底栏（浮层 · 真折射）：画在采样源之后 ⇒ 能折射到页面内容
         GlassBottomBar(

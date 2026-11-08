@@ -80,6 +80,25 @@ object ApkDownloader {
     /** 记住下载好的是哪个版本，用来判断"能不能直装不用重下" */
     private var readyVersion: String = ""
 
+    /**
+     * ★★2026-11-09 国内加速镜像（用户：「软件内自动更新的国内镜像做了吗？不然会下的很慢」）
+     *
+     * 直连 GitHub Releases 在国内经常几十 KB/s，6.5MB 的包要等好几分钟。
+     * 这两个公共代理是 Web 版实测出来的（2026-09-29，各源 3 次字节数 +
+     * sha256 完全一致才敢用）：gh-proxy.com 最快 0.9~3.5s，gh.xmly.dev 备用。
+     *
+     * 用法：`镜像前缀 + 去掉协议的 GitHub 直链`，例
+     *   https://gh-proxy.com/github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.0.5/tuxiaoji-v1.1.0.5.apk
+     *
+     * ⚠️ 权衡：这是**第三方服务器**，它能看到你下载了哪个文件（公开内容，不含任何
+     *   个人数据）。所以顺序是**镜像先、官方直链永远兜底** —— 代理挂了也能下。
+     *   文件完整性不靠代理保证，靠下载完的签名指纹校验（[verify]）。
+     */
+    private val MIRRORS = listOf(
+        "https://gh-proxy.com/",
+        "https://gh.xmly.dev/"
+    )
+
     private val client: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
@@ -163,14 +182,40 @@ object ApkDownloader {
     //  内部实现
     // ══════════════════════════════════════════════════════════
 
-    /** 流式下载。成功返回文件，失败返回 null（不抛，异常在内部吞掉并记日志） */
+    /**
+     * 多源下载：镜像优先 → 官方直链兜底。任一成功即返回，全失败才 null。
+     *
+     * 为什么不是"只用一个最快的"：公共代理随时可能挂、限流或返回错误页，
+     * 而更新是**用户主动点了必须完成**的操作 —— 卡在这里用户只能去浏览器手动下。
+     */
     private fun download(ctx: Context, url: String): File? {
         if (url.isBlank()) return null
+        val path = url.removePrefix("https://").removePrefix("http://")
+        val candidates = ArrayList<String>(MIRRORS.size + 1)
+        MIRRORS.forEach { candidates.add(it + path) }
+        candidates.add(url)          // ★官方直链永远排最后，兜底
+
+        for ((i, c) in candidates.withIndex()) {
+            val tag = if (i < MIRRORS.size) "镜像${i + 1}" else "官方直链"
+            Log.i("hiking", "尝试下载（$tag）")
+            val f = tryDownload(ctx, c)
+            if (f != null) {
+                Log.i("hiking", "下载成功（$tag）")
+                return f
+            }
+            Log.w("hiking", "$tag 失败，换下一个源")
+        }
+        return null
+    }
+
+    /** 从单个源下载。失败返回 null（不抛，异常在这里吞掉并记日志） */
+    private fun tryDownload(ctx: Context, url: String): File? {
         val dir = File(ctx.cacheDir, DIR).apply { if (!exists()) mkdirs() }
         // 先写 .part，下完再改名 —— 中途失败时不会留下一个"看起来完整"的坏包
         val part = File(dir, "$FILE_NAME.part")
         val target = File(dir, FILE_NAME)
         runCatching { target.delete() }
+        runCatching { part.delete() }        // 上一个源留下的半截包要清掉
 
         var resp: okhttp3.Response? = null
         try {
@@ -204,7 +249,7 @@ object ApkDownloader {
                 }
             }
             _state.value = State.Downloading(done, total)
-            // 小于 1MB 基本是错误页/半截包（正常包 6~7MB）
+            // 小于 1MB 基本是错误页/半截包（正常包 6~7MB）—— 换下一个源
             if (part.length() < 1024 * 1024) {
                 runCatching { part.delete() }
                 return null

@@ -805,7 +805,18 @@ fun UpdateAvailableDialog(
                 fontSize = 12.sp, lineHeight = 17.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            if (release.body.isNotBlank()) {
+            // ★★2026-11-09 更新内容优先用 **App 内置日志**（对齐 Web 版 showUpdateModal）
+            //
+            //   Web 版的教训写得明明白白：直接渲染 GitHub Release 的 body，
+            //   用户在更新弹窗里看到的是"门禁项数、构建细节、验证结果表格" ——
+            //   那是写给 Release 页面看的技术文档，不是给人看的更新说明。
+            //   内置日志（NativeChangelog）只写"用户看得见的变化"，而且离线也能显示。
+            //   只有内置没有这个版本（比如推了个未来版本）才回退到 release.body。
+            val builtinBody = NativeChangelog
+                .firstOrNull { it.first.equals(release.tag, ignoreCase = true) }
+                ?.second
+            val bodyText = (builtinBody ?: release.body).trim()
+            if (bodyText.isNotBlank()) {
                 Spacer(Modifier.height(10.dp))
                 Column(
                     modifier = Modifier
@@ -817,7 +828,7 @@ fun UpdateAvailableDialog(
                         .padding(10.dp)
                 ) {
                     Text(
-                        release.body.take(800),
+                        bodyText.take(800),
                         fontSize = 11.sp, lineHeight = 17.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

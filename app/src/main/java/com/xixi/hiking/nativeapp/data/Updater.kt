@@ -37,18 +37,12 @@ object Updater {
      *   以前和网页版混在 `xixi-hiking` 里，只能拉列表再按资产名筛，
      *   还踩过"把网页版更新推给 App 用户"的坑。现在独立了，列表里全是自己人。
      *
-     * ★但**不能把旧地址直接删掉**：已经装在用户手机上的 v1.1.0.3 及更早版本，
-     *   代码里硬编码的还是旧仓库。如果新版本只发新仓库，那些人的"检查更新"
-     *   永远查旧仓库 → 永远"已是最新"，而且**不会报错**，静默断供。
-     *   ⇒ 过渡期两个源都查，取版本更高的那条。等确认所有用户都升过一轮
-     *     （自己手机 + 朋友），再删 [API_LEGACY]。
+     * ★★2026-11-09 用户：「不需要双仓库更新，只需要更新本仓库就行了」
+     *   ⇒ 只查这一个源。之前留的"旧仓库兜底"（API_LEGACY）已删除，
+     *     旧仓库里的 App 发布也一并清理了 —— 那边只放网页版。
      */
-    private const val API_PRIMARY =
+    private const val RELEASES_API =
         "https://api.github.com/repos/NiUKinGDoM/xixi-hiking-note/releases?per_page=30"
-
-    /** 过渡期兜底：老仓库。留着是为了让还没升级的老版本能被"带上来" */
-    private const val API_LEGACY =
-        "https://api.github.com/repos/NiUKinGDoM/xixi-hiking/releases?per_page=30"
 
     /**
      * 资产名里出现这些词才算「本应用的安装包」。
@@ -112,17 +106,8 @@ object Updater {
         //   离线时直接返回 Offline（中性状态），不发请求、不报"检查失败"。
         if (!Net.isOnline(ctx)) return Result.Offline
 
-        // ① 主源（新仓库）
-        val primary = query(API_PRIMARY)
-        if (primary is Result.Update) return primary
-
-        // ② 主源没有更新 / 失败 → 再问一次老仓库（过渡期兜底，见 API_LEGACY 注释）
-        val legacy = query(API_LEGACY)
-        return when {
-            legacy is Result.Update -> legacy
-            primary is Result.Failed && legacy is Result.Failed -> Result.Failed
-            else -> Result.UpToDate
-        }
+        // ★2026-11-09 单一源（用户要求不搞双仓库，只看本仓库）
+        return query(RELEASES_API)
     }
 
     /** 查一个仓库的发布列表，找出版本最高且比本机新的那条 */
