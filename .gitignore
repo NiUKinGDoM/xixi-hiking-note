@@ -1,0 +1,42 @@
+# ══════════════════════════════════════════════════════════
+#  徒步小记 · Android App
+#
+#  ★原则：仓库只放**源码**。
+#    安装包、构建产物、混淆还原表、历史归档一律不进 git ——
+#    它们会让每次 clone 多拉上 GB，而且二进制一旦提交就永久留在历史里。
+#    APK 走 GitHub Release 附件，那里不限量、不占仓库体积。
+# ══════════════════════════════════════════════════════════
+
+# ── 构建产物 ──
+build/
+app/build/
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ── 本地环境（含 sdk.dir 绝对路径，换机就失效）──
+local.properties
+*.iml
+.idea/
+
+# ── 安装包：走 Release 附件，不进 git ──
+*.apk
+*.aab
+*.apks
+
+# ── 签名与密钥（泄露等于别人能给你出假包）──
+*.jks
+*.keystore
+*.p12
+
+# ── 本地归档 / 调试产物 / 临时源码快照 ──
+_apk_archive/
+_debug/
+_backup_*/
+_backup_*
+
+# ── 工作区与工具缓存 ──
+.workbuddy/
+node_modules/

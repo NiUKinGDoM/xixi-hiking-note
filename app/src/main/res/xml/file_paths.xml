@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ★2026-11-02 修复：原来只声明了 cache-path，
+    但「分享照片」用的是 filesDir/photos/xxx.jpg —— 不在 cache 里，
+    FileProvider.getUriForFile() 会抛 IllegalArgumentException（"Failed to find configured root"），
+    被上层 catch 之后表现为「点分享没反应」。
+
+    files-path 放开整个 files 目录，覆盖 photos/ 与 backups/；cache-path 留给诊断导出。
+-->
+<paths>
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
+</paths>

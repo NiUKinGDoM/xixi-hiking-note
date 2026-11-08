@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      ★必须显式声明 INTERNET（2026-11-02 发现的致命遗漏）：
+        debug 构建 AGP 会自动注入这条权限，所以调试时一切正常；
+        但 release 包不会自动加 —— 装到手机上「检查更新」「WebDAV 同步」全部失败，
+        而且报错是 SecurityException，用户只看到"同步失败"。
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ★2026-11-03 计划到期 / 备份提醒（对齐 Web 版通知）。Android 13+ 需运行时授权 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!--
+      ★2026-11-03 保存图片到相册（分享卡 / 收款码）。
+        Android 10+ 走 MediaStore，**不需要任何权限**；
+        Android 9 及以下只能写公共目录，需要这条 —— 用 maxSdkVersion 限死 28，
+        新系统上不会出现在权限列表里（免得用户以为要读相册）。
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
+    <application
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:fullBackupContent="false"
+        android:label="徒步小记"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density|smallestScreenSize|fontScale">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>
