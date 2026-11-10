@@ -373,6 +373,30 @@ object WebDavClient {
      * Web 端「云端备份」能直接列出来并恢复，反过来也一样。
      */
     suspend fun uploadBackup(ctx: Context): Pair<Boolean, String> {
+        // ══════════════════════════════════════════════════════════
+        //  ★★2026-11-10 冲突保护（最保守的做法：发现冲突就不传，绝不清默覆盖）
+        //
+        //  背景：现在同步是**整份覆盖**。如果两台手机各自改了记录，
+        //  后同步的那台会把另一台的改动全部抹掉 —— 而且同步状态只报"成功"，
+        //  用户根本不知道自己丢了东西。
+        //
+        //  判据：云端最新备份的修改时间 > 本机上次同步时间 + 2 分钟容差
+        //       ⇒ 说明云端这份不是我们上次传的，是别处（另一台设备/网页版）动的。
+        //
+        //  ★为什么选择"拒绝"而不是"自动合并"：
+        //    自动合并在记录级别做（按 id 取 updatedAt 较新的那条）会掩盖真正的
+        //    删除操作 —— 你在 A 机删掉的记录，会被 B 机的旧数据"合并"回来。
+        //    对日记类数据，宁可让用户自己选，也不能猜。
+        //
+        //  lastSync <= 0（从没同步过）不拦：否则第一次用永远传不上去。
+        // ══════════════════════════════════════════════════════════
+        val remoteNewest = newestCloudMtime(ctx)
+        val lastSync = Prefs.getLong(ctx, Prefs.KEY_SYNC_LAST_AT, 0L)
+        if (remoteNewest > 0 && lastSync > 0 && remoteNewest > lastSync + 120_000L) {
+            return false to "云端有比上次同步更新的备份，可能来自另一台设备。" +
+                "先从云端恢复一次再上传，免得把那份覆盖掉"
+        }
+
         val name = backupName()
         val bytes = try {
             BackupExport.build(
@@ -410,6 +434,16 @@ object WebDavClient {
      * ★2026-11-05 云端只留最近 2 份（对齐 Web `listSyncFilesFromCloud` + slice 删除）。
      * 依赖 [listBackups] 已按时间新→旧排序；失败静默（清理失败不该影响上传结果）。
      */
+    /** 云端最新一份备份的修改时间；读不到返回 0（当作"没有云端数据"，不拦上传） */
+    private fun newestCloudMtime(ctx: Context): Long {
+        return try {
+            val (files, _) = listBackups(ctx, includeLegacy = true)
+            files.maxOfOrNull { it.lastModified } ?: 0L
+        } catch (t: Throwable) {
+            0L
+        }
+    }
+
     private fun pruneOldBackups(ctx: Context) {
         val (files, _) = listBackups(ctx, includeLegacy = false)
         if (files.size <= 2) return

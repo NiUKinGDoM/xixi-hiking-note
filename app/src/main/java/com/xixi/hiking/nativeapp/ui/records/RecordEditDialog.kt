@@ -1,6 +1,8 @@
 package com.xixi.hiking.nativeapp.ui.records
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import com.xixi.hiking.nativeapp.ui.safeClickable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -95,7 +97,15 @@ fun RecordEditDialog(
     onDismiss: () -> Unit,
     onSave: (RecordEntity) -> Unit,
     onAddPhotos: (List<android.net.Uri>) -> Unit,
-    onRemovePhoto: (PhotoEntity) -> Unit
+    onRemovePhoto: (PhotoEntity) -> Unit,
+    /**
+     * ★2026-11-10 历史山名（去重后的），用于名称输入框下面的快捷选项。
+     *
+     * 为什么值得做：「太白山 / 太白 / 太白山景区」被写成三种，统计就散了 ——
+     * 明明去过 8 次，系统只认 3 次。而且这种脏数据**越攒越难清**（已有的记录不会自动归一）。
+     * 点一下填入旧值，比任何提示文案都有效。
+     */
+    knownNames: List<String> = emptyList()
 ) {
     val isNew = initial == null
     val fmt = remember { SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()) }
@@ -135,9 +145,26 @@ fun RecordEditDialog(
     var lightboxAt by remember { mutableStateOf<Int?>(null) }
     // 选图 launcher 提到这一层：网格里的「+」和灯箱里的「添加」共用同一个入口，
     // 免得两套 launcher 各算各的上限（Web 也是同一个 pickPhotos）
+    val editCtx = androidx.compose.ui.platform.LocalContext.current
     val pickLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(24)
-    ) { uris -> if (uris.isNotEmpty()) onAddPhotos(uris) }
+    ) { uris ->
+        if (uris.isNotEmpty()) {
+            // ★2026-11-10 从照片 EXIF 读拍摄时间，自动填日期。
+            //   只在**新建**、且日期还是默认的"今天"时才填 ——
+            //   编辑老记录时用户可能特意改过日期，不能被照片覆盖掉。
+            //   读不到（截图、微信转存的图往往没有 EXIF）就什么都不做。
+            if (isNew) {
+                val shot = exifDateTime(editCtx, uris.first())
+                val today = java.text.SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                    .format(java.util.Date())
+                if (shot != null && createdAt.take(10) == today) {
+                    createdAt = shot
+                }
+            }
+            onAddPhotos(uris)
+        }
+    }
 
     GlassOverlay(
         bottomClose = false,
@@ -169,6 +196,39 @@ fun RecordEditDialog(
             // ── 名称 ──
             FieldLabel("名称")
             GlassTextField(name, { name = it }, "山名 / 线路名")
+            // ★2026-11-10 历史山名快选（解决"同一座山写成三种"把统计打散）
+            //   规则：去掉和当前输入完全相同的；输入了片段就按片段过滤；最多 8 个。
+            //   横向滚动而不是换行 —— 换行会把下面的表单整体往下推，小屏上很挤。
+            val nameQ = name.trim()
+            val namePicks = knownNames
+                .filter { it.isNotBlank() && it != nameQ }
+                .filter { nameQ.isEmpty() || it.contains(nameQ, ignoreCase = true) }
+                .take(8)
+            if (namePicks.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    namePicks.forEach { n ->
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+                                )
+                                .safeClickable { name = n }
+                                .padding(horizontal = 9.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                n, fontSize = 11.5.sp, maxLines = 1,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
 
             // ── 海拔 + 难度 ──
             // ★★2026-11-05 两次调参（用户先要「海拔缩一半」，看过之后又说「难度/用时太宽」）
@@ -418,4 +478,36 @@ private fun displayDateTime(raw: String): String {
         }
     }
     return raw
+}
+
+/**
+ * 读照片的拍摄时间（EXIF），返回 `yyyy-MM-dd HH:mm`。
+ *
+ * ★2026-11-10 用户：「照片 EXIF 自动填日期」——
+ *   从相册选完照片，日期自动变成**拍那张照片的时间**，不用自己回忆"这是哪天拍的"。
+ *
+ * 两个现实约束：
+ *   ① 截图、微信转存的图常常**没有** EXIF → 返回 null，什么都不改
+ *   ② EXIF 里存的是 `2026:11:10 08:31:00`（用冒号分隔日期，跟 ISO 不一样），要转换
+ */
+private fun exifDateTime(ctx: android.content.Context, uri: android.net.Uri): String? {
+    return try {
+        ctx.contentResolver.openInputStream(uri)?.use { stream ->
+            val exif = androidx.exifinterface.media.ExifInterface(stream)
+            val raw = exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME_ORIGINAL)
+                ?: exif.getAttribute(androidx.exifinterface.media.ExifInterface.TAG_DATETIME)
+                ?: return null
+            // "2026:11:10 08:31:00" → "2026-11-10 08:31"
+            val parts = raw.trim().split(" ")
+            if (parts.size < 2) return null
+            val date = parts[0].replace(":", "-")
+            val time = parts[1].take(5)
+            // 粗校验：年份必须在合理区间，避免读到乱码时间
+            val year = date.take(4).toIntOrNull() ?: return null
+            if (year < 2000 || year > 2100) return null
+            "$date $time"
+        }
+    } catch (t: Throwable) {
+        null
+    }
 }

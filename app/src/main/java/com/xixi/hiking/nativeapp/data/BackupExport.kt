@@ -99,7 +99,10 @@ object BackupExport {
         // ★★2026-11-05 回忆册（对齐 Web 的 buildFullBackupZip）
         //   zip 里除了 json + 照片，还要有一本"能直接读"的册子：
         //   日记排版、A4 分页友好，浏览器 Ctrl+P 就能存成 PDF。
-        //   ★照片用包内相对路径 photos/<id>.jpg —— 解压后图就能显示（比 Web 版更完整）。
+        //   ★★2026-11-10 照片改成**内嵌 base64**（用户：「不要得读取照片才能显示了，
+        //     直接显示进去吧，压缩一下就行，但是也得清楚」）——
+        //     以前用 `photos/<id>.jpg` 相对路径，HTML 单独发出去（或只留 html）
+        //     整页都是破图。现在单文件自带全部照片，zip 里的 photos/ 仍然保留原图。
         val memoir = MemoirHtml.build(
             appTitle = runCatching {
                 Prefs.getString(context, Prefs.KEY_APP_TITLE, "徒步小记")
@@ -108,7 +111,8 @@ object BackupExport {
             photosByRecord = photosByRecord,
             plans = db.plannedTripDao().observeAllOnce(),
             payloadJson = String(json, Charsets.UTF_8),
-            exportedAt = System.currentTimeMillis()
+            exportedAt = System.currentTimeMillis(),
+            ctx = context
         ).toByteArray(Charsets.UTF_8)
 
         ZipOutputStream(out).use { zos ->

@@ -17,19 +17,80 @@ import java.util.Locale
  */
 object MemoirHtml {
 
+    /**
+     * 把一张本地照片压成 data URI（JPEG / base64）。
+     *
+     * 三条纪律：
+     *   ① 只缩不放（`coerceAtMost(1f)`）—— 原图比 420 还小时别给我拉大，糊得更难看
+     *   ② 及时 recycle —— 一次导出可能过几百张，不回收就是 OOM
+     *   ③ 任何异常返回 null，调用方退回相对路径 —— 少一张图，不能整个导出失败
+     */
+    private fun inlineJpeg(
+        ctx: android.content.Context,
+        fileName: String,
+        maxSide: Int = 420,
+        quality: Int = 72
+    ): String? {
+        var bmp: android.graphics.Bitmap? = null
+        var scaled: android.graphics.Bitmap? = null
+        return try {
+            val f = PhotoStore.file(ctx, fileName)
+            if (!f.exists() || f.length() == 0L) return null
+            bmp = android.graphics.BitmapFactory.decodeFile(f.absolutePath) ?: return null
+            val w = bmp.width
+            val h = bmp.height
+            if (w <= 0 || h <= 0) return null
+            val scale = minOf(maxSide.toFloat() / w, maxSide.toFloat() / h, 1f)
+            val target = if (scale < 1f) {
+                android.graphics.Bitmap.createScaledBitmap(
+                    bmp, (w * scale).toInt().coerceAtLeast(1),
+                    (h * scale).toInt().coerceAtLeast(1), true
+                ).also { scaled = it }
+            } else bmp
+            val bos = java.io.ByteArrayOutputStream()
+            target.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, bos)
+            "data:image/jpeg;base64," +
+                android.util.Base64.encodeToString(bos.toByteArray(), android.util.Base64.NO_WRAP)
+        } catch (t: Throwable) {
+            null
+        } finally {
+            try {
+                if (scaled != null) scaled.recycle()
+                if (bmp != null && bmp !== scaled) bmp.recycle()
+            } catch (t: Throwable) {
+                // 回收失败无所谓
+            }
+        }
+    }
+
     fun build(
         appTitle: String,
         records: List<RecordEntity>,
         photosByRecord: Map<String, List<PhotoEntity>>,
         plans: List<PlannedTripEntity>,
         payloadJson: String,
-        exportedAt: Long
+        exportedAt: Long,
+        /**
+         * ★2026-11-10 传 context 进来，把照片**压缩后内嵌**成 base64。
+         *
+         * 之前的做法是 `src="photos/xxx.jpg"` 相对路径 —— 依赖 zip 里那个目录，
+         * 一旦把 HTML 单独发给别人（或解压后只留了 html），整页照片全部变破图。
+         * 用户原话：「不要得读取照片才能显示了，直接显示进去吧，压缩一下就行，但是也得清楚」
+         *
+         * 参数取 420px / 质量 72：页面里缩略图显示宽度只有 104px，
+         * 420px 有 4 倍余量（高分屏、打印都够清晰），单张压到 25~35KB。
+         * 不放原图是因为 24 张/条 × 几十条会拼出上百 MB 的 HTML，打开就卡死。
+         */
+        ctx: android.content.Context? = null
     ): String {
         val title = esc(appTitle.ifBlank { "徒步小记" })
         val recCards = records.joinToString("") { r ->
             val phs = photosByRecord[r.id].orEmpty()
             val imgs = phs.joinToString("") { ph ->
-                "<img src=\"photos/${esc(ph.id)}.jpg\" alt=\"\">"
+                val fileName = "${ph.id}.jpg"
+                // 内嵌成功就用 data URI，失败（文件缺失/解码失败）才退回相对路径
+                val src = (ctx?.let { inlineJpeg(it, fileName) }) ?: "photos/${esc(ph.id)}.jpg"
+                "<img src=\"$src\" alt=\"\">"
             }
             val meta = ArrayList<String>()
             if (r.mood.isNotBlank()) meta.add("心情 " + esc(r.mood))

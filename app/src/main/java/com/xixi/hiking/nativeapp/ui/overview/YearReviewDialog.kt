@@ -2,6 +2,10 @@ package com.xixi.hiking.nativeapp.ui.overview
 
 import com.xixi.hiking.nativeapp.ui.safeClickable
 import com.xixi.hiking.nativeapp.ui.theme.Radii
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.layer.drawLayer
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -154,7 +158,22 @@ fun YearReviewDialog(
         corner = 22,
         maxHeightFraction = 0.80f
     ) {
-        Column(Modifier.fillMaxWidth()) {
+        // ★★2026-11-10 支持「存成图片」：把这一整块内容录进 GraphicsLayer，
+        //   点按钮时直接取渲染结果 —— 所见即所得，不用另画一套长图。
+        val gLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val darkNow = LocalIsDark.current
+        var saving by remember { mutableStateOf(false) }
+
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .drawWithContent {
+                    gLayer.record { this@drawWithContent.drawContent() }
+                    drawLayer(gLayer)
+                }
+        ) {
             // 标题 + 年份切换
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -318,6 +337,57 @@ fun YearReviewDialog(
                     }
                 }
                 Spacer(Modifier.height(4.dp))
+            }
+
+            // ★2026-11-10 「存成图片」——
+            //   年度回顾以前只能自己看；年底那张"今年走了多少"没有出口，
+            //   而分享卡只能分享单条记录。这里补上唯一的自然传播点。
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    if (saving) "正在生成…" else "存成图片",
+                    fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
+                    color = AccentIndigo,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(AccentIndigo.copy(alpha = 0.10f))
+                        .safeClickable {
+                            if (saving) return@safeClickable
+                            saving = true
+                            scope.launch {
+                                try {
+                                    val img = gLayer.toImageBitmap()
+                                    val src = img.asAndroidBitmap()
+                                    // 录下来的是玻璃卡片（背景透明），合成一层底色再存 ——
+                                    // 否则存到相册是一张透明底图，看着像坏文件。
+                                    val out = android.graphics.Bitmap.createBitmap(
+                                        src.width, src.height,
+                                        android.graphics.Bitmap.Config.ARGB_8888
+                                    )
+                                    val canvas = android.graphics.Canvas(out)
+                                    canvas.drawColor(
+                                        if (darkNow) 0xFF101A2E.toInt() else 0xFFF7F8FD.toInt()
+                                    )
+                                    canvas.drawBitmap(src, 0f, 0f, null)
+                                    val ok = com.xixi.hiking.nativeapp.data.GallerySaver
+                                        .saveBitmap(ctx, out, "年度回顾-$year")
+                                    android.widget.Toast.makeText(
+                                        ctx,
+                                        if (ok) "已存到相册" else "保存失败，请检查相册权限",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } catch (t: Throwable) {
+                                    android.util.Log.w("hiking", "年度回顾存图失败", t)
+                                    android.widget.Toast.makeText(
+                                        ctx, "保存失败", android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } finally {
+                                    saving = false
+                                }
+                            }
+                        }
+                        .padding(horizontal = 14.dp, vertical = 7.dp)
+                )
             }
         }
     }

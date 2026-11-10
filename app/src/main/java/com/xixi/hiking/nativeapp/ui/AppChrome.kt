@@ -845,10 +845,30 @@ fun TopGlassBar(
  */
 @Composable
 fun FpsPill(fps: Int, jank: Int = 0) {
+    // ★★2026-11-10 颜色随帧率变（用户：「帧率胶囊的颜色变化你没做，加上」）
+    //
+    // 光有数字没用 —— "52" 是好是坏得心里有数才知道，而开这个开关的人
+    // 就是想**一眼**看出卡不卡。所以按状态给色，且避开绿色和紫色（项目设计红线）：
+    //   · 灰   fps 还没采到
+    //   · 靛蓝 流畅：≥55 且这一秒没掉帧（品牌色，代表"正常"）
+    //   · 橙   一般：≥40 或有零星掉帧（沿用 Web 的橙，代表"注意"）
+    //   · 红   卡：<40 或掉帧 ≥3 次（代表"有问题"）
+    // 用 animateColorAsState 过渡 320ms，数字每帧跳时底色不会闪。
+    val target = when {
+        fps <= 0 -> Color(0xFF94A3B8)
+        fps >= 55 && jank == 0 -> Color(0xFF6366F1)
+        fps >= 40 && jank < 3 -> Color(0xFFFB923C)
+        else -> Color(0xFFEF4444)
+    }
+    val tone by androidx.compose.animation.animateColorAsState(
+        targetValue = target,
+        animationSpec = androidx.compose.animation.core.tween(320),
+        label = "fpsTone"
+    )
     Row(
         modifier = Modifier
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .background(Color(0x59FB923C))
+            .background(tone.copy(alpha = 0.38f))
             .border(
                 1.dp, Color.White.copy(alpha = 0.50f),
                 androidx.compose.foundation.shape.RoundedCornerShape(50)

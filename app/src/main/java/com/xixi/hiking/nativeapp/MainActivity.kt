@@ -353,6 +353,24 @@ private fun AppRoot(
     val plans by planDao.observeAll().collectAsState(initial = emptyList())
 
     // ══════════════════════════════════════════════════════════════
+    //  ★★2026-11-10 计划闹钟重排（真提醒，不依赖 App 开着）
+    //
+    //  以前只有"打开 App 时顺手提一句"，App 关着就永远不响 ——
+    //  计划、日历、到期处理整套流程的最后一环是空的。
+    //  现在：计划列表一变（新增/删除/改日期/完成），立刻按最新数据重排闹钟。
+    //  幂等，重复调没有副作用；放在 IO 线程，别让排闹钟卡住首屏。
+    // ══════════════════════════════════════════════════════════════
+    androidx.compose.runtime.LaunchedEffect(plans) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                com.xixi.hiking.nativeapp.data.PlanAlarm.reschedule(context, plans)
+            } catch (t: Throwable) {
+                android.util.Log.w("hiking", "重排计划闹钟失败（已忽略）", t)
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════
     //  ★★2026-11-09 启动自动检查更新（对齐 Web 版 autoCheckUpdateOnLaunch）
     //
     //  Web 版的行为：启动后延迟 1.5 秒查一次 GitHub → 有新版本弹大窗，
@@ -1103,6 +1121,10 @@ private fun AppRoot(
             record = r,
             photos = photos,
             hazeState = hazeState,
+            // ★2026-11-10 同一座山的其它记录（名称去空格、忽略大小写比对）
+            sameName = records.filter {
+                it.id != r.id && it.name.trim().equals(r.name.trim(), ignoreCase = true)
+            },
             onDismiss = { selected = null },
             onEdit = { editRecord = r; editDraftId = r.id; pendingNewId = ""; showEdit = true; selected = null },
             onDelete = {
@@ -1253,6 +1275,15 @@ private fun AppRoot(
             draftId = editDraftId,
             photos = editPhotos,
             hazeState = hazeState,
+            // ★2026-11-10 历史山名：按出现次数排（常去的排在前面），点一下就能填入
+            knownNames = remember(records) {
+                records
+                    .map { it.name.trim() }
+                    .filter { it.isNotBlank() }
+                    .groupingBy { it }.eachCount()
+                    .entries.sortedByDescending { it.value }
+                    .map { it.key }
+            },
             onDismiss = {
                 // ★新建时如果已经为了挂照片落过骨架记录，「取消」必须把它连照片一起清掉，
                 //   否则列表里会永远留一条「（新记录）」。

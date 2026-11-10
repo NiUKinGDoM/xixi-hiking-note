@@ -22,7 +22,7 @@ android {
         //   第二段 = (索引 / 121) % 11
         //   每段 0~10 共 11 个值，满 10 进位
         // ⇒ 以后**只改 versionCode 这一行**，版本名自动算出来，不用手抄。
-        val vc = 129
+        val vc = 130
         val idx = vc - 1
         versionCode = vc
         versionName = "1.${(idx / 121) % 11}.${(idx / 11) % 11}.${idx % 11}"
@@ -94,6 +94,11 @@ dependencies {
 
     // 图片加载（替代 <img> + dataURL）
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    // ★2026-11-10 读照片的拍摄时间（选完照片自动填日期）。
+    //   版本锁 1.3.6：本机 Gradle 缓存里就有这一份（Coil 的传递依赖），
+    //   离线构建能直接用，不用联网拉包。
+    implementation("androidx.exifinterface:exifinterface:1.3.6")
 
     // WebDAV 同步（对齐 Web 版的坚果云同步）
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

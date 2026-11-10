@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Terrain
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -70,7 +71,15 @@ fun RecordDetailDialog(
     hazeState: HazeState,
     onDismiss: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    /**
+     * ★2026-11-10 同一座山的**其它**记录（不含自己），用来显示"第几次/上次用时"。
+     *
+     * 为什么值得做：库里已经攒了几十条，但界面只按时间平铺 ——
+     * 用户看不到"同一座山去过几次、比上次快了多少"。
+     * 而这类对比恰恰是日记 App 最有价值的情绪反馈，且**不需要用户多录一个字**。
+     */
+    sameName: List<RecordEntity> = emptyList()
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
 
@@ -127,6 +136,40 @@ fun RecordDetailDialog(
             }
 
             Spacer(Modifier.height(14.dp))
+
+            // ③b ★2026-11-10 第几次来 + 与上次的对比
+            //   只在这一座山有历史记录时出现；没有就完全不占位置（不显示"第 1 次"这种废话）
+            if (sameName.isNotEmpty()) {
+                val nth = sameName.size + 1
+                val prev = sameName.maxByOrNull { it.createdAt }
+                val bits = ArrayList<String>(3)
+                bits.add("第 $nth 次来这座山")
+                if (prev != null) {
+                    bits.add("上次 " + prev.createdAt.replace("T", " ").take(10))
+                    if (prev.duration > 0 && record.duration > 0) {
+                        val diff = prev.duration - record.duration
+                        when {
+                            diff > 60 -> bits.add("这次快 ${fmtDur(diff)}")
+                            diff < -60 -> bits.add("这次慢 ${fmtDur(-diff)}")
+                            else -> bits.add("用时和上次差不多")
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.History, null,
+                        tint = com.xixi.hiking.nativeapp.ui.theme.AccentIndigo,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        bits.joinToString(" · "),
+                        fontSize = 11.5.sp, lineHeight = 16.sp,
+                        color = com.xixi.hiking.nativeapp.ui.theme.AccentIndigo
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
 
             // ④ 指标网格（无卡片背景）
             val metrics = buildList {

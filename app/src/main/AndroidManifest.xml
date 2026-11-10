@@ -30,6 +30,15 @@
     -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!--
+      ★2026-11-10 计划提醒（真定时）：
+        · RECEIVE_BOOT_COMPLETED —— 手机重启后 AlarmManager 里的闹钟全部清空，
+          没有这条，用户重启一次，之后所有计划提醒静默失效。
+        · 闹钟本身用 setAndAllowWhileIdle，**不需要** SCHEDULE_EXACT_ALARM
+          （那个是特殊权限，Android 13 起要用户手动开，为了"早八点提醒"去逼一道权限墙不值）。
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
@@ -58,6 +67,22 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- ★2026-11-10 计划到点提醒的接收器（AlarmManager 触发） -->
+        <receiver
+            android:name=".data.PlanAlarmReceiver"
+            android:exported="false" />
+
+        <!-- ★2026-11-10 开机重排：重启后闹钟全丢，必须重排一次 -->
+        <receiver
+            android:name=".data.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

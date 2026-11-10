@@ -82,6 +82,23 @@ object Notifier {
         }
     }
 
+    /**
+     * 计划当天早上的提醒（由 [PlanAlarm] 的闹钟触发，**不需要 App 开着**）。
+     *
+     * 和 [dailyReminders] 的区别：那条是"打开 App 时顺手提一句"，
+     * 这条是真正的定时提醒 —— 用户关着手机也能收到。
+     */
+    fun postPlanReminder(ctx: Context, planName: String) {
+        try {
+            if (!canPost(ctx)) return
+            ensureChannel(ctx)
+            val name = planName.ifBlank { "今天的计划" }
+            post(ctx, 2001, "今天出发：$name", "记得看天气、带够水。回来记一条。")
+        } catch (t: Throwable) {
+            android.util.Log.w("hiking", "计划提醒发送失败（已忽略）", t)
+        }
+    }
+
     private fun post(ctx: Context, id: Int, title: String, text: String) {
         ensureChannel(ctx)
         val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
