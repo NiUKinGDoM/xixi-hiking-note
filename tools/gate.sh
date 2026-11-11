@@ -71,6 +71,13 @@ python tools/smellscan.py --selftest
 python tools/smellscan.py --gate
 
 echo
+echo "════ ①g 单文件行数（防止拆开的代码又堆回去）════"
+# 2026-11-11 加：SettingsScreen 曾长到 1746 行一个函数 1260 行。
+# 阈值 1500 只拦"又出现巨型文件"，800 是提醒该拆了 —— 不逼着立刻重构，
+# 否则门禁一红就发不了版，最后只能整个关掉。
+python tools/sizeguard.py --gate
+
+echo
 echo "════ ①g Android Lint（error 必须清零）════"
 # 真静态分析：API 级别（minSdk 24 上才炸的那种）、权限、资源类型、
 # Compose 的 SuspiciousIndentation 等。这一项抓到过「分享卡在 Android 7~9 必崩」。
