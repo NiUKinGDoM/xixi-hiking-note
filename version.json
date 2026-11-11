@@ -1,8 +1,8 @@
 {
-  "tag": "v1.1.0.9",
-  "version": "1.1.0.9",
-  "apk": "tuxiaoji-v1.1.0.9.apk",
-  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.0.9/tuxiaoji-v1.1.0.9.apk",
-  "notes": "【修复】\n- 年度回顾「存成图片」以前点了直接失败，现在能正常存进相册\n- 这个按钮从底部挪到标题栏右侧，不会再被弹窗边缘挤掉\n\n【说明】\n- 分享图改成单独排版（1080×1620 竖图），不再截弹窗 —— 截图会带上圆角和半透明背景，不适合发出去",
-  "published": "2026-11-11T09:28:12"
+  "tag": "v1.1.0.10",
+  "version": "1.1.0.10",
+  "apk": "tuxiaoji-v1.1.0.10.apk",
+  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.0.10/tuxiaoji-v1.1.0.10.apk",
+  "notes": "【优化】\n- 更新包支持断点续传：下载中途断了，下次接着下，不用从头再来\n- 下载失败时多一个「改用浏览器下载」，不再是死路\n- 上次没正常退出，打开 App 会提醒一句（以前只写日志，谁也不知道）\n- 记录列表的搜索和排序做了缓存，条数多了滚动更跟手\n- 打包增加体积守门：以后资源膨胀会当场报出来",
+  "published": "2026-11-11T14:07:31"
 }
