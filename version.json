@@ -1,8 +1,8 @@
 {
-  "tag": "v1.1.0.10",
-  "version": "1.1.0.10",
-  "apk": "tuxiaoji-v1.1.0.10.apk",
-  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.0.10/tuxiaoji-v1.1.0.10.apk",
-  "notes": "【优化】\n- 更新包支持断点续传：下载中途断了，下次接着下，不用从头再来\n- 下载失败时多一个「改用浏览器下载」，不再是死路\n- 上次没正常退出，打开 App 会提醒一句（以前只写日志，谁也不知道）\n- 记录列表的搜索和排序做了缓存，条数多了滚动更跟手\n- 打包增加体积守门：以后资源膨胀会当场报出来",
-  "published": "2026-11-11T14:07:31"
+  "tag": "v1.1.1.0",
+  "version": "1.1.1.0",
+  "apk": "tuxiaoji-v1.1.1.0.apk",
+  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.0/tuxiaoji-v1.1.1.0.apk",
+  "notes": "【优化】\n- 设置页内部结构整理：把一个 1700 多行的文件拆开（功能没变）\n- 以后设置项再膨胀，打包时会被拦住，不会再长成一坨",
+  "published": "2026-11-11T15:04:50"
 }
