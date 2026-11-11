@@ -22,7 +22,7 @@ android {
         //   第二段 = (索引 / 121) % 11
         //   每段 0~10 共 11 个值，满 10 进位
         // ⇒ 以后**只改 versionCode 这一行**，版本名自动算出来，不用手抄。
-        val vc = 134
+        val vc = 135
         val idx = vc - 1
         versionCode = vc
         versionName = "1.${(idx / 121) % 11}.${(idx / 11) % 11}.${idx % 11}"
