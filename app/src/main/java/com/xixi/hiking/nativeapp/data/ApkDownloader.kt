@@ -215,23 +215,36 @@ object ApkDownloader {
         val part = File(dir, "$FILE_NAME.part")
         val target = File(dir, FILE_NAME)
         runCatching { target.delete() }
-        runCatching { part.delete() }        // 上一个源留下的半截包要清掉
+
+        // ★★2026-11-11 断点续传：6.5MB 的包在国内网络下经常下到一半断掉，
+        //   以前一旦断就从头再来，第二次断又要重来 —— 用户会觉得"更不了"。
+        //   现在把已下部分留在 .part，下次带 Range 头接着要后面的字节。
+        //   · 服务端回 206 Partial Content → 追加写
+        //   · 回 200（不支持 Range，或文件变了）→ 从头写，行为退回旧逻辑
+        val have = if (part.exists()) part.length() else 0L
 
         var resp: okhttp3.Response? = null
         try {
-            resp = client.newCall(
-                Request.Builder().url(url)
-                    // GitHub 的资产直链会 302 到 objects.githubusercontent.com，OkHttp 自动跟
-                    .header("User-Agent", "XiXiHiking/${Updater.currentVersion()}")
-                    .build()
-            ).execute()
+            val req = Request.Builder().url(url)
+                // GitHub 的资产直链会 302 到 objects.githubusercontent.com，OkHttp 自动跟
+                .header("User-Agent", "XiXiHiking/${Updater.currentVersion()}")
+                .apply { if (have > 0) header("Range", "bytes=$have-") }
+                .build()
+            resp = client.newCall(req).execute()
+
+            val resumed = have > 0 && resp.code == 206
             if (!resp.isSuccessful) return null
             val body = resp.body ?: return null
-            val total = body.contentLength()
-            var done = 0L
+
+            // 续传时 total 要补上已经下好的部分，否则进度条会从 0 跳回
+            val remain = body.contentLength()
+            val total = if (resumed && remain > 0) have + remain else remain
+            var done = if (resumed) have else 0L
+            if (!resumed && have > 0) runCatching { part.delete() }   // 服务端不认续传 → 重来
+
             var lastNotify = 0L
             body.byteStream().use { input ->
-                FileOutputStream(part).use { out ->
+                FileOutputStream(part, /* append = */ resumed).use { out ->
                     val buf = ByteArray(16 * 1024)
                     while (true) {
                         val n = input.read(buf)
@@ -260,8 +273,8 @@ object ApkDownloader {
             }
             return target
         } catch (e: Throwable) {
-            Log.w("hiking", "下载中断：${e.message}")
-            runCatching { part.delete() }
+            // ★注意：这里**不删** .part —— 保留已下的字节，下次接着下
+            Log.w("hiking", "下载中断（已保留 ${part.length()} 字节待续传）：${e.message}")
             return null
         } finally {
             runCatching { resp?.close() }

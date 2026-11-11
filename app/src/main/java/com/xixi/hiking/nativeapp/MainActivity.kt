@@ -400,6 +400,30 @@ private fun AppRoot(
         }
     }
 
+    // ══════════════════════════════════════════════════════════════
+    //  ★★2026-11-11 上次启动崩过 → 提示一次
+    //
+    //  以前崩溃只写本地日志，界面上一句话都没有：用户只觉得"刚才闪了一下"，
+    //  然后什么都没有，诊断也永远不会被看到。这里用轻提示提一句，
+    //  不弹窗、不打断，用户想看再进设置导出。
+    //  ★只在**没提示过的**那次崩溃上出现（CrashGuard.shouldNotifyLast 用内容 hash 去重）。
+    // ══════════════════════════════════════════════════════════════
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2600)      // 排在更新检查之后，别抢注意力
+        val notify = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                com.xixi.hiking.nativeapp.data.CrashGuard.shouldNotifyLast(context)
+            } catch (t: Throwable) {
+                false
+            }
+        }
+        if (notify) {
+            com.xixi.hiking.nativeapp.ui.AppToast.show(
+                "上次没正常退出，设置 → 诊断里可导出", "error"
+            )
+        }
+    }
+
     // ★★2026-11-05 首启「从网页版搬过来」引导
     //
     //   背景：Android 上**不可能**用原生 APK 覆盖安装网页版（PWA 由 Chrome 生成 WebAPK，

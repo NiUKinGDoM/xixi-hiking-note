@@ -132,6 +132,28 @@ object CrashGuard {
     }
 
     /**
+     * ★2026-11-11 「上次崩溃过」只提示一次。
+     *
+     * 为什么需要：崩溃日志写在本地，但界面上没有任何地方会主动告诉你 ——
+     * 用户只会觉得"刚才好像闪了一下"，然后什么都不发生。设置页里的诊断卡
+     * 埋得太深，不会有人主动去翻。
+     *
+     * 用崩溃内容的 hashCode 当 key：同一份崩溃只提示一次（不骚扰），
+     * 下次再崩（内容不同）会重新提示。
+     */
+    fun shouldNotifyLast(ctx: Context): Boolean {
+        return try {
+            val txt = readLast(ctx) ?: return false
+            val key = "crash_notice_%d".format(txt.hashCode())
+            if (Prefs.getBool(ctx, key, false)) return false
+            Prefs.setBool(ctx, key, true)
+            true
+        } catch (t: Throwable) {
+            false
+        }
+    }
+
+    /**
      * ★导出诊断包（2026-11-02）—— 对齐 Web 版 `exportDiagnostics`。
      *
      * 崩溃记录器只能「看」，用户没法把堆栈发出来。这个函数把定位问题需要的

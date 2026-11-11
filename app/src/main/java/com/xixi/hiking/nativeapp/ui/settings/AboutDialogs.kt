@@ -771,6 +771,7 @@ fun UpdateAvailableDialog(
     //   状态住在 ApkDownloader 这个单例里，所以关掉弹窗也在继续下，
     //   再打开还能看到进度 —— 放在 remember 里一关就断了。
     val st by com.xixi.hiking.nativeapp.data.ApkDownloader.state.collectAsState()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
 
     GlassOverlay(hazeState = hazeState, onDismiss = onDismiss, maxWidthFraction = 0.92f, corner = 20) {
         Column(Modifier.fillMaxWidth()) {
@@ -874,6 +875,28 @@ fun UpdateAvailableDialog(
             (st as? com.xixi.hiking.nativeapp.data.ApkDownloader.State.Failed)?.let { f ->
                 Spacer(Modifier.height(8.dp))
                 Text(f.reason, fontSize = 11.5.sp, color = Color(0xFFDC2626))
+                // ★2026-11-11 失败不能是死路。
+                //   镜像和官方直链都挂了的时候（或被公司网络拦了），
+                //   用户手里还剩一条路：拿浏览器下。以前这里只有"重试"，
+                //   重试还是同一个网络、同一个结果，等于把人卡死。
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "改用浏览器下载",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = com.xixi.hiking.nativeapp.ui.theme.AccentIndigo,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(
+                            com.xixi.hiking.nativeapp.ui.theme.AccentIndigo.copy(alpha = 0.10f)
+                        )
+                        .safeClickable {
+                            com.xixi.hiking.nativeapp.data.Updater.openDownload(
+                                ctx, release.apkUrl
+                            )
+                        }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                )
             }
 
             Spacer(Modifier.height(12.dp))

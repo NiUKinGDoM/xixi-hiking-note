@@ -155,23 +155,29 @@ fun RecordListScreen(
     var pendingDeleteRecord by remember { mutableStateOf<RecordEntity?>(null) }
 
     // ★山册视图不提供搜索（Web 版同规则）
-    val shown = records
-        .filter {
-            showMountainBook || query.isBlank() || it.name.contains(query, true) ||
-                it.notes.contains(query, true) || it.companions.contains(query, true)
-        }
-        .let { list ->
-            when (sortField) {
-                "name" -> list.sortedWith(
-                    if (sortDesc) compareByDescending<RecordEntity> { it.name.lowercase() }
-                    else compareBy { it.name.lowercase() }
-                )
-                else -> list.sortedWith(
-                    if (sortDesc) compareByDescending<RecordEntity> { it.createdAt }
-                    else compareBy { it.createdAt }
-                )
+    //
+    // ★★2026-11-11 加 remember：原来这段 filter+sort 在**每次重组**都会重算一遍，
+    //   而列表滚动时重组非常频繁 —— 几百条记录 × 三个字段的 contains + 排序，
+    //   白白烧 CPU。现在只有这几个输入真的变了才重算。
+    val shown = remember(records, query, showMountainBook, sortField, sortDesc) {
+        records
+            .filter {
+                showMountainBook || query.isBlank() || it.name.contains(query, true) ||
+                    it.notes.contains(query, true) || it.companions.contains(query, true)
             }
-        }
+            .let { list ->
+                when (sortField) {
+                    "name" -> list.sortedWith(
+                        if (sortDesc) compareByDescending<RecordEntity> { it.name.lowercase() }
+                        else compareBy { it.name.lowercase() }
+                    )
+                    else -> list.sortedWith(
+                        if (sortDesc) compareByDescending<RecordEntity> { it.createdAt }
+                        else compareBy { it.createdAt }
+                    )
+                }
+            }
+    }
 
     val totalPages = maxOf(1, (shown.size + pageSize - 1) / pageSize)
     val safePage = page.coerceIn(0, totalPages - 1)

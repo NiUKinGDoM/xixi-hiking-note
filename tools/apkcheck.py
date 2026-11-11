@@ -69,16 +69,47 @@ def main():
 
     size_mb = os.path.getsize(apk) / 1048576.0
 
+    # ★2026-11-11 包体守门 + 资源排行
+    #
+    # 为什么要加：这个包 6.5MB 里 6.7MB（解压后）是两个中文字库，其余几乎为零。
+    # 以后往 res/ 里塞一张 2MB 的图、或者换一套更大的字体，**没有任何东西会提醒你** ——
+    # 下载更新的人（以及每次覆盖安装的自己）都在为这几十 MB 付流量和时间。
+    # 这里给一条硬线 + 一份 Top5 清单，膨胀了立刻能看出是谁干的。
+    BUDGET_MB = 9.0
+    top = []
+    try:
+        import zipfile
+        with zipfile.ZipFile(apk) as z:
+            for i in z.infolist():
+                top.append((i.file_size, i.filename))
+        top.sort(reverse=True)
+    except Exception as e:
+        print("   （资源排行读取失败，已忽略：%s）" % e)
+
+    if size_mb > BUDGET_MB:
+        problems.append(
+            "包体 %.1fMB 超过预算 %.0fMB —— 先看下面的资源排行，别直接改预算"
+            % (size_mb, BUDGET_MB)
+        )
+
     if problems:
         print("✗ APK 体检不过：%s" % os.path.basename(apk))
         for p in problems:
             print("   · " + p)
+        if top:
+            print("   体积排行：")
+            for sz, nm in top[:5]:
+                print("     %6.2fMB  %s" % (sz / 1048576, nm))
         return 1
 
     print("✓ APK 体检通过：%s" % os.path.basename(apk))
     print("   · vc%d → %s" % (vc, expect_name))
     print("   · 图标 ✓  INTERNET ✓  minSdk %s" % (sdk.group(1) if sdk else "?"))
-    print("   · 体积 %.1f MB" % size_mb)
+    print("   · 体积 %.1f MB（预算 %.0f MB）" % (size_mb, BUDGET_MB))
+    if top:
+        # 只列前 3：看得见是哪几样占地方，又不刷屏
+        for sz, nm in top[:3]:
+            print("     %6.2fMB  %s" % (sz / 1048576, nm))
     return 0
 
 
