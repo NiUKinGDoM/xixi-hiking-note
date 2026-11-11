@@ -1,8 +1,8 @@
 {
-  "tag": "v1.1.1.2",
-  "version": "1.1.1.2",
-  "apk": "tuxiaoji-v1.1.1.2.apk",
-  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.2/tuxiaoji-v1.1.1.2.apk",
-  "notes": "【优化】\n- 设置页代码整理完成：一个 1700 多行的文件拆成四个互不打扰的分组（功能完全没变）\n- 以后再改同步或通知那块，不会再牵动整页",
-  "published": "2026-11-11T16:08:04"
+  "tag": "v1.1.1.4",
+  "version": "1.1.1.4",
+  "apk": "tuxiaoji-v1.1.1.4.apk",
+  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.4/tuxiaoji-v1.1.1.4.apk",
+  "notes": "【优化】\n- 记录详情的标题字号改和其他弹窗一致（原来是 18 号特粗，翻到它像另一个 App）\n- 计划页的搜索和排序做了缓存，条数多了滚动更跟手\n- 删除/错误提示用的红收敛成一个统一色值，以后调色只改一处\n\n【检查】\n- 全量 140 项测试通过，设计一致性、临时文件、资源引用全部干净\n- README、发版手册、回归清单、Web 对齐表全部同步更新",
+  "published": "2026-11-11T17:33:34"
 }
