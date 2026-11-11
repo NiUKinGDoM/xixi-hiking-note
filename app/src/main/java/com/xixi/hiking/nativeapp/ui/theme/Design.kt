@@ -75,7 +75,7 @@ object Type {
  */
 object Palette {
     /** 危险 / 删除 / 错误 */
-    val danger = Color(0xFFDC2626)
+    val danger = DangerRed
     val dangerSoft = Color(0xFFEF4444)
     val dangerOnDark = Color(0xFFF87171)
     /** 已完成 / 成功 */

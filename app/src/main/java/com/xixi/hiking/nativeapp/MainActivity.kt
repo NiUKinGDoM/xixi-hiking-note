@@ -71,6 +71,7 @@ import java.util.Date
 import java.util.Locale
 import com.xixi.hiking.nativeapp.ui.theme.Ink
 import androidx.compose.ui.draw.drawBehind
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -638,7 +639,7 @@ private fun AppRoot(
                                 .fillMaxWidth()
                                 .padding(horizontal = 14.dp, vertical = 4.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFFDC2626).copy(alpha = 0.10f))
+                                .background(DangerRed.copy(alpha = 0.10f))
                                 .safeClickable { showCrashDetail = true }
                                 .padding(horizontal = 11.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically

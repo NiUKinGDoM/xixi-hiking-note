@@ -44,6 +44,7 @@ import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * 照片占用详情 —— ★★2026-11-04 按 Web `openPhotoUsageDetailModal` 重做。
@@ -191,7 +192,7 @@ fun PhotoUsageDialog(
                                 .clip(RoundedCornerShape(99.dp))
                                 .background(
                                     if (over) Brush.horizontalGradient(
-                                        listOf(Color(0xFFF87171), Color(0xFFDC2626))
+                                        listOf(Color(0xFFF87171), DangerRed)
                                     ) else Brush.horizontalGradient(
                                         listOf(Color(0xFF34D399), Color(0xFF10B981))
                                     )
@@ -208,13 +209,13 @@ fun PhotoUsageDialog(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isDark) Color(0xFFDC2626).copy(alpha = 0.16f)
-                                else Color(0xFFDC2626).copy(alpha = 0.08f)
+                                if (isDark) DangerRed.copy(alpha = 0.16f)
+                                else DangerRed.copy(alpha = 0.08f)
                             )
                             .border(
                                 1.dp,
                                 if (isDark) Color(0xFFF87171).copy(alpha = 0.45f)
-                                else Color(0xFFDC2626).copy(alpha = 0.35f),
+                                else DangerRed.copy(alpha = 0.35f),
                                 RoundedCornerShape(12.dp)
                             )
                             .padding(horizontal = 11.dp, vertical = 8.dp)

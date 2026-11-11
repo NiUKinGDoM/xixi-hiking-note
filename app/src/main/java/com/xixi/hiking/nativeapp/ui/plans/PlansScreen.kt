@@ -77,6 +77,7 @@ import java.util.Date
 import java.util.Locale
 import com.xixi.hiking.nativeapp.ui.theme.Ink
 import androidx.compose.material.icons.filled.EventNote
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 // ★2026-11-04 每页条数改成用户可调（设置 → 杂项 → 每页条数），这里是默认值
 private const val DEFAULT_PLAN_PAGE_SIZE = 10
@@ -151,25 +152,40 @@ fun PlansScreen(
     }
 
     // Web 计划页搜索：按名称匹配（记录页还匹配备注/同行人，计划没有那些字段）
-    val visiblePlans = plans.filter {
-        query.isBlank() || it.name.contains(query, true) || it.location.contains(query, true)
+    //
+    // ★★2026-11-11 第 3 项（流畅度）：这段原来每次重组都重算 —— filter + 排序 +
+    //   groupBy 三趟，而计划页滚动时重组非常频繁。记录页那边同一个问题已经修过，
+    //   这里漏了。现在拆成两段 remember：只有输入变了才重算，只有页码变了才重新分组。
+    val visibleSorted = remember(plans, query, sortField, sortDesc) {
+        plans
+            .filter {
+                query.isBlank() || it.name.contains(query, true) ||
+                    it.location.contains(query, true)
+            }
+            .let { l ->
+                when (sortField) {
+                    "name" -> l.sortedWith(
+                        if (sortDesc) compareByDescending<PlannedTripEntity> { it.name.lowercase() }
+                        else compareBy { it.name.lowercase() }
+                    )
+                    else -> l.sortedWith(
+                        if (sortDesc) compareByDescending<PlannedTripEntity> { it.plannedDate }
+                        else compareBy { it.plannedDate }
+                    )
+                }
+            }
     }
-    val sorted = visiblePlans.let { l ->
-        when (sortField) {
-            "name" -> l.sortedWith(
-                if (sortDesc) compareByDescending<PlannedTripEntity> { it.name.lowercase() }
-                else compareBy { it.name.lowercase() }
-            )
-            else -> l.sortedWith(
-                if (sortDesc) compareByDescending<PlannedTripEntity> { it.plannedDate }
-                else compareBy { it.plannedDate }
-            )
-        }
-    }
-    val totalPages = maxOf(1, (sorted.size + planPageSize - 1) / planPageSize)
+    val totalPages = maxOf(1, (visibleSorted.size + planPageSize - 1) / planPageSize)
     val safePage = page.coerceIn(0, totalPages - 1)
-    val pageItems = sorted.drop(safePage * planPageSize).take(planPageSize)
-    val grouped = pageItems.groupBy { it.plannedDate.take(4) }.toSortedMap(compareByDescending { it })
+    // 沿用旧名：下面还有 4 处引用（分页条文案、空状态判断等），改名会牵动更多地方
+    val visiblePlans = visibleSorted
+    val sorted = visibleSorted
+    val pageItems = remember(visibleSorted, safePage, planPageSize) {
+        visibleSorted.drop(safePage * planPageSize).take(planPageSize)
+    }
+    val grouped = remember(pageItems) {
+        pageItems.groupBy { it.plannedDate.take(4) }.toSortedMap(compareByDescending { it })
+    }
 
     // ★★2026-11-02 重做结构（和记录页同一套，对齐 Web 版「整页一起滚」）：
     //   旧结构是「工具行钉死 + 中间一块独立滚动区 + 外面垫 96dp」，
@@ -826,7 +842,7 @@ private fun PlanBadge(diff: Int?) {
     if (diff == null) return
     val (text, color) = when {
         // ★2026-11-03 用户：「已过期 XX 天改掉，已过期三个字就行了」
-        diff < 0 -> "已过期" to Color(0xFFDC2626)
+        diff < 0 -> "已过期" to DangerRed
         diff == 0 -> "今天" to AccentIndigo
         diff == 1 -> "明天" to Color(0xFF0EA5E9)
         else -> return
@@ -920,12 +936,12 @@ private fun PlanPill(text: String, danger: Boolean = false, onClick: () -> Unit)
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
             .background(
-                if (danger) Color(0xFFDC2626).copy(alpha = 0.10f)
+                if (danger) DangerRed.copy(alpha = 0.10f)
                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f)
             )
             .border(
                 1.dp,
-                if (danger) Color(0xFFDC2626).copy(alpha = 0.35f)
+                if (danger) DangerRed.copy(alpha = 0.35f)
                 else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
                 RoundedCornerShape(10.dp)
             )
@@ -934,7 +950,7 @@ private fun PlanPill(text: String, danger: Boolean = false, onClick: () -> Unit)
     ) {
         Text(
             text, fontSize = 13.sp,
-            color = if (danger) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurface,
+            color = if (danger) DangerRed else MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium
         )
     }

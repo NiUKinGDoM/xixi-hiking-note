@@ -47,6 +47,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import com.xixi.hiking.nativeapp.ui.theme.Ink
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * 计划日历（月视图）—— 对齐 Web 版 `renderPlannedCalendar`：
@@ -440,7 +441,7 @@ private fun cnDate(key: String): String {
 
 /** 相对今天的状态徽章（Web 版 pl-overdue / pl-today / pl-tomorrow） */
 private fun relBadge(d: Int): Pair<String, Color>? = when {
-    d < 0 -> "已过期 ${-d} 天" to Color(0xFFDC2626)
+    d < 0 -> "已过期 ${-d} 天" to DangerRed
     d == 0 -> "今天" to Color(0xFF4F46E5)
     d == 1 -> "明天" to Color(0xFF0EA5E9)
     else -> null

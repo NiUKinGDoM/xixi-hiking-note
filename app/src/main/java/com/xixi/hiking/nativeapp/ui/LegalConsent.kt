@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import com.xixi.hiking.nativeapp.ui.settings.LegalClauseCard
 import com.xixi.hiking.nativeapp.ui.theme.LocalIsDark
 import dev.chrisbanes.haze.HazeState
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * 条款版本 —— 改条款必改这个值，用户会被重新征求同意。
@@ -179,7 +180,7 @@ fun LegalConsentScreen(
                                 .border(
                                     if (warn) 2.dp else 1.5.dp,
                                     when {
-                                        warn -> Color(0xFFDC2626).copy(alpha = 0.65f)
+                                        warn -> DangerRed.copy(alpha = 0.65f)
                                         checked -> if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                                         isDark -> Color.White.copy(alpha = 0.40f)
                                         else -> Color(0xFF0F172A).copy(alpha = 0.35f)
@@ -208,7 +209,7 @@ fun LegalConsentScreen(
                         Text(
                             "请先勾选「我已阅读并同意」",
                             fontSize = 11.5.sp,
-                            color = Color(0xFFDC2626)
+                            color = DangerRed
                         )
                     }
 

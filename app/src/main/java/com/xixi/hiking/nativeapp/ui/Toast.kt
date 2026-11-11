@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.xixi.hiking.nativeapp.ui.liquid.liquidGlassChip
 import com.xixi.hiking.nativeapp.ui.theme.LocalIsDark
 import kotlinx.coroutines.delay
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★★轻提示（toast）—— 1:1 对齐 Web 版 `_createToast`
@@ -113,7 +114,7 @@ fun AppToastHost() {
                 else Color(0xFFE2E8F0).copy(alpha = 0.40f)
             }
             val stroke = when (AppToast.kind) {
-                "error" -> (if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)).copy(alpha = 0.55f)
+                "error" -> (if (isDark) Color(0xFFF87171) else DangerRed).copy(alpha = 0.55f)
                 "success" -> (if (isDark) Color(0xFF4ADE80) else Color(0xFF22C55E)).copy(alpha = 0.55f)
                 else -> (if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)).copy(alpha = 0.55f)
             }

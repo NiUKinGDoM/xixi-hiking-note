@@ -302,3 +302,88 @@ App 内也有：「设置 → 诊断报告 → 分享」，含最近 20 步操�
 - `docs/OBFUSCATION.md` —— 混淆细节（如果和本文件重复，以本文件为准）
 - `README.md` —— 项目简介
 - `构建说明-ANDROID.md` —— 早期构建笔记（历史参考）
+
+## 6. 检查更新链路（2026-11 重构，改之前先读这节）
+
+以前 App 直接查 `api.github.com/repos/.../releases`，**国内基本不通** ——
+本机实测 curl 直连三次全是 1 毫秒断连（`HTTP=000`），只有挂代理才通。
+所以「检测更新老是失败」不是代码 bug，是网络到不了。
+
+现在是三层：
+
+| 层 | 地址 | 作用 |
+|---|---|---|
+| ① 版本清单 | `cdn.jsdelivr.net/gh/NiUKinGDoM/xixi-hiking-note@main/version.json` | **主源**，国内直连约 0.25s |
+| ② GitHub API | `api.github.com/.../releases` | 兜底，海外或有代理时可用 |
+| ③ 安装包 | gh-proxy → gh.xmly → 官方直链 | 三源轮询，支持断点续传 |
+
+### version.json 是谁写的
+
+`tools/release.py` 在发布成功后自动：
+
+1. 写 `version.json`（tag / version / apk 名 / 直链 / 正文 / 发布时间）
+2. 调 `https://purge.jsdelivr.net/gh/.../version.json` 清 CDN 缓存
+3. `git add version.json && commit && push`
+
+> ⚠️ **第 3 步失败等于没发布**：jsDelivr 读的是仓库里的文件，没 push 上去，
+> App 就永远读不到新版（而且界面看起来一切正常）。脚本会打一行
+> 「version.json 已写好但没推上去」，看到就手动 push 一次再 purge。
+
+### jsDelivr 的缓存坑
+
+`@main` 分支引用最长缓存 **12 小时**。发完版不 purge 的话，用户点「检测更新」
+还是旧版本。purge 接口是公开的，一次 GET 就够：
+`https://purge.jsdelivr.net/gh/<user>/<repo>@main/version.json`
+
+### 断点续传的边界
+
+- 带 `Range` 头 → 服务端回 **206** 才追加写；回 **200** 说明不支持，清 `.part` 重下
+- 网络中断时**故意不删** `.part`（这是续传的前提）
+- 换镜像时沿用同一份 `.part`：同一 release 的同一 APK 各镜像字节一致，
+  拼坏也会被签名校验挡住
+
+## 7. 代码规模守卫（sizeguard.py）
+
+单文件：**> 1500 行 ERROR（门禁红），> 800 行 WARN**。
+
+为什么阈值是 1500 而不是 800：一刀切会把 `MainActivity`(1453)、`LiquidGlass`(1400)
+也判成 ERROR，那不是防膨胀是逼着立刻重构 —— 门禁一红就发不了版，最后只能整个关掉。
+
+目标只有一个：**不许再出现 1700 行的单文件**（`SettingsScreen` 曾经一个函数 1260 行）。
+
+## 8. 字体（不要随手子集化）
+
+`app_serif_regular.ttf` / `app_serif_bold.ttf` 各 3.35MB，是**全站正文**的宋体字形。
+
+`tools/subset_fonts.py` 能砍到约 2.36MB（-29%），但**当前不启用**：
+
+- 全站正文都用这个字体，砍字意味着生僻山名会回落到系统黑体（能显示，但字形不一致）
+- 省 2MB 换视觉不一致，不值
+
+真要启用时的注意点：
+
+- 字符集 = GB2312 全集 + 源码里出现的所有字符（保证界面文案不缺字）
+- 缺字时 Android 会回退系统字体，不会出豆腐块
+- 原件会备份到 `_backup_fonts/`，要还原直接拷回去
+
+## 9. 设置页结构（2026-11 拆分）
+
+`SettingsScreen.kt` 曾是一个 1746 行的文件、其中单个 `@Composable` 函数 1260 行。
+现在 815 行，四个分组各自独立：
+
+| 文件 | 内容 |
+|---|---|
+| `SettingsScreen.kt` | 状态声明 + 标题 + 四个 Section 调用 + 弹窗调度 |
+| `SettingsSections.kt` | `DataSection` / `AppearanceSection` / `MiscSection` / `AboutSection` |
+| `SettingsWidgets.kt` | `SettingRow` / `InfoTile` / `StatInline` / `AboutLink` / `ExportOpt` / `ioScope` |
+
+**状态归属三条规则**（拆新的分组时照这个来）：
+
+1. 只在组内用的状态 → 内聚进组件（`checkingUpdate` / `syncBusy` / `autoSync`）
+2. 只读的值 → 直接传参（`photoUsageDesc` / `pageSizePref` / `dav` / `syncTick`）
+3. 有读有写、且语义不止"打开" → 传 setter（`onShowSync: (Boolean) -> Unit`，
+   因为 `showSync` 解绑后要置 false 关闭，单向回调会丢语义）
+
+> 拆出去的函数一律**无状态**：不持有 `remember`、不读写 `Prefs`、不碰 `context`。
+> 状态留在父级，否则切页再回来状态会被重建（填一半的配置全丢）。
+

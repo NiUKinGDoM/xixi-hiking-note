@@ -105,7 +105,10 @@ fun RecordDetailDialog(
                 Icon(Icons.Filled.Terrain, null, tint = Ink, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "记录详情", fontSize = 18.sp, fontWeight = FontWeight.Black,
+                    // ★2026-11-11 第 6 项（弹窗协调度）：原来是 18sp + Black，
+                    //   和其他 11 个弹窗的 16sp + Bold 不一致 —— 单独一个弹窗标题大一号、
+                    //   字重还更重，翻到它的时候会有"这是另一个 App"的错觉。统一。
+                    "记录详情", fontSize = 16.sp, fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f)
                 )

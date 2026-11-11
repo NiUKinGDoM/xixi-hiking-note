@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import com.xixi.hiking.nativeapp.ui.GlassOverlay
 import androidx.compose.foundation.lazy.items
 import com.xixi.hiking.nativeapp.ui.liquid.glassStatic
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★概览页 —— 对齐 Web 版 #tab-overview 的版块顺序：
@@ -374,12 +375,12 @@ fun OverviewScreen(
                     Modifier
                         .size(28.dp)
                         .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(Color(0xFFDC2626).copy(alpha = 0.14f)),
+                        .background(DangerRed.copy(alpha = 0.14f)),
                     contentAlignment = Alignment.Center
                 ) {
                     androidx.compose.material3.Icon(
                         androidx.compose.material.icons.Icons.Filled.Warning, null,
-                        tint = Color(0xFFDC2626), modifier = Modifier.size(16.dp)
+                        tint = DangerRed, modifier = Modifier.size(16.dp)
                     )
                 }
                 Spacer(Modifier.width(10.dp))

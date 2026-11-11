@@ -4,7 +4,7 @@
 
 | 文件 | 行数 | 主要声明 |
 |---|---|---|
-| `MainActivity.kt` | 1454 | `androidx`、`AppRoot`、`PlaceholderScreen`、`sampleRecords`、`samplePlans` |
+| `MainActivity.kt` | 1455 | `androidx`、`AppRoot`、`PlaceholderScreen`、`sampleRecords`、`samplePlans` |
 | `data/ApkDownloader.kt` | 363 |  |
 | `data/BackupExport.kt` | 261 |  |
 | `data/BackupParser.kt` | 384 | `parseWebDav`、`readDavConfig`、`normalizeDavUrl`、`decPwd` |
@@ -38,36 +38,36 @@
 | `ui/GlassPickers.kt` | 515 | `GlassDateTimePicker`、`StepArrow`、`Stepper`、`MoodWeatherPicker`、`PickerField`、`parseToCalendar`、`emojiOf` |
 | `ui/GlassWidgets.kt` | 403 | `GlassTextField`、`GlassButton`、`GlassConfirm`、`GlassSegmented`、`FieldLabel`、`DialogTitle`、`DialogMessage`、`DialogCloseBar` |
 | `ui/GlobalSearchBar.kt` | 119 | `GlobalSearchBar` |
-| `ui/LegalConsent.kt` | 288 | `LegalConsentScreen`、`LegalLinkLine`、`buildCheckText`、`buildStateTitle` |
+| `ui/LegalConsent.kt` | 289 | `LegalConsentScreen`、`LegalLinkLine`、`buildCheckText`、`buildStateTitle` |
 | `ui/SafeTap.kt` | 147 | `safeClickable`、`safeCombinedClickable` |
-| `ui/Toast.kt` | 174 | `AppToastHost` |
-| `ui/liquid/LiquidGlass.kt` | 1401 | `LiquidBackdropHost`、`liquidGlassSurface`、`glassBar`、`LocalDark`、`glassPill`、`androidx`、`glassStatic`、`staticGlassSurface` … |
+| `ui/Toast.kt` | 175 | `AppToastHost` |
+| `ui/liquid/LiquidGlass.kt` | 1402 | `LiquidBackdropHost`、`liquidGlassSurface`、`glassBar`、`LocalDark`、`glassPill`、`androidx`、`glassStatic`、`staticGlassSurface` … |
 | `ui/milestones/MilestoneListDialog.kt` | 270 | `MilestoneListDialog`、`MilestoneRow`、`MilestoneEntryCard` |
-| `ui/overview/HeatmapView.kt` | 449 | `HeatmapCard`、`DayRecordRow`、`PickChip`、`fmt1`、`fmtDuration` |
-| `ui/overview/OverviewScreen.kt` | 1049 | `OverviewScreen`、`YMChip`、`GuideLine`、`findTimeMachine`、`StatCard`、`fmtH`、`MiniStat`、`SoftErrChip` |
+| `ui/overview/HeatmapView.kt` | 450 | `HeatmapCard`、`DayRecordRow`、`PickChip`、`fmt1`、`fmtDuration` |
+| `ui/overview/OverviewScreen.kt` | 1050 | `OverviewScreen`、`YMChip`、`GuideLine`、`findTimeMachine`、`StatCard`、`fmtH`、`MiniStat`、`SoftErrChip` |
 | `ui/overview/YearReviewDialog.kt` | 487 | `yearRecordsOf`、`ymd`、`calcYearStats`、`YearReviewDialog`、`MetricCard`、`durNum`、`durUnit`、`pctChange` … |
 | `ui/overview/YearReviewImage.kt` | 183 |  |
-| `ui/photos/PhotoLightbox.kt` | 617 | `PhotoLightbox`、`ZoomableImage`、`CircleButton`、`LightboxPill`、`shareOne`、`saveToGallery` |
+| `ui/photos/PhotoLightbox.kt` | 618 | `PhotoLightbox`、`ZoomableImage`、`CircleButton`、`LightboxPill`、`shareOne`、`saveToGallery` |
 | `ui/photos/Photos.kt` | 149 | `PhotoThumb`、`PhotoStrip`、`PhotoPickerGrid` |
-| `ui/plans/PlanCalendarView.kt` | 448 | `PlanCalendarView`、`DayDetailHeader`、`PlanDetailRow`、`EmptyHint`、`cnDate`、`relBadge` |
+| `ui/plans/PlanCalendarView.kt` | 449 | `PlanCalendarView`、`DayDetailHeader`、`PlanDetailRow`、`EmptyHint`、`cnDate`、`relBadge` |
 | `ui/plans/PlanDetailDialog.kt` | 446 | `PlanDetailDialog`、`normalizePlanDate`、`displayPlanDate`、`PlanDueDialog` |
-| `ui/plans/PlansScreen.kt` | 991 | `PlansScreen`、`PlansGuideCard`、`PlanRow`、`SortArrow`、`PlanBadge`、`RowIconAction`、`daysBetween`、`RoundIconButton` … |
+| `ui/plans/PlansScreen.kt` | 1007 | `PlansScreen`、`PlansGuideCard`、`PlanRow`、`SortArrow`、`PlanBadge`、`RowIconAction`、`daysBetween`、`RoundIconButton` … |
 | `ui/records/MountainBookView.kt` | 843 | `ridgeOf`、`MountainBookView`、`MtnCard`、`MtnDrawer`、`DrawerPill`、`MtnMergeDialog`、`StatCell`、`diffNameOnly` … |
-| `ui/records/RecordDetailDialog.kt` | 371 | `RecordDetailDialog`、`Pill`、`fmt1`、`fmtDur` |
+| `ui/records/RecordDetailDialog.kt` | 374 | `RecordDetailDialog`、`Pill`、`fmt1`、`fmtDur` |
 | `ui/records/RecordEditDialog.kt` | 514 | `diffLabel`、`normalizeDateInput`、`RecordEditDialog`、`displayDateTime`、`exifDateTime` |
-| `ui/records/RecordListScreen.kt` | 931 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
-| `ui/settings/AboutDialogs.kt` | 927 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
-| `ui/settings/CloudBackupsDialog.kt` | 285 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 648 |  |
+| `ui/records/RecordListScreen.kt` | 932 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
+| `ui/settings/AboutDialogs.kt` | 928 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
+| `ui/settings/CloudBackupsDialog.kt` | 286 | `CloudBackupsDialog` |
+| `ui/settings/FullChangelog.kt` | 662 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
-| `ui/settings/PhotoUsageDialog.kt` | 314 | `PhotoUsageDialog`、`sizeParts` |
+| `ui/settings/PhotoUsageDialog.kt` | 315 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
 | `ui/settings/SettingsScreen.kt` | 816 | `SettingsScreen` |
 | `ui/settings/SettingsSections.kt` | 781 | `AppearanceSection`、`AboutSection`、`MiscSection`、`DataSection` |
-| `ui/settings/SettingsWidgets.kt` | 491 | `openUrl`、`AboutLink`、`ExportOpt`、`ioScope`、`InfoTile`、`StatInline`、`SettingRow`、`androidxClip` … |
+| `ui/settings/SettingsWidgets.kt` | 492 | `openUrl`、`AboutLink`、`ExportOpt`、`ioScope`、`InfoTile`、`StatInline`、`SettingRow`、`androidxClip` … |
 | `ui/settings/SyncConfigDialog.kt` | 193 | `SyncConfigDialog`、`ReadOnlyRow` |
 | `ui/share/ShareCardDialog.kt` | 547 | `ShareCardDialog`、`CardMetric`、`renderCardToFile`、`renderCardBitmap`、`probeFont`、`drawShareRow`、`moodText`、`weatherText` … |
 | `ui/theme/Design.kt` | 130 |  |
-| `ui/theme/Theme.kt` | 250 | `AppTextScale`、`HikingTheme` |
+| `ui/theme/Theme.kt` | 262 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24637 行**
+**合计 65 个文件、24695 行**

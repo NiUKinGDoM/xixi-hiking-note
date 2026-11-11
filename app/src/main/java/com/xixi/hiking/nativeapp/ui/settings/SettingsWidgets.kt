@@ -113,6 +113,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import com.xixi.hiking.nativeapp.ui.theme.Ink
 import com.xixi.hiking.nativeapp.ui.liquid.liquidGlassChip
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 
 /**
@@ -482,7 +483,7 @@ internal fun Modifier.androidxClip(): Modifier =
 internal fun Modifier.androidxBg(): Modifier = this
     .background(Color(0x14DC2626))
     .border(
-        1.dp, Color(0xFFDC2626).copy(alpha = 0.35f),
+        1.dp, DangerRed.copy(alpha = 0.35f),
         androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
     )
 

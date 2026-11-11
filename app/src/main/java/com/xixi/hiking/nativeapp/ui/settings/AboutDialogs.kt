@@ -77,6 +77,7 @@ import com.xixi.hiking.nativeapp.ui.theme.Ink
 import com.xixi.hiking.nativeapp.ui.theme.LocalIsDark
 import com.xixi.hiking.nativeapp.ui.theme.Radii
 import dev.chrisbanes.haze.HazeState
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * 关于页的四个弹窗：更新日志 / 隐私政策 / 免责声明 / 支持作者。
@@ -874,7 +875,7 @@ fun UpdateAvailableDialog(
             }
             (st as? com.xixi.hiking.nativeapp.data.ApkDownloader.State.Failed)?.let { f ->
                 Spacer(Modifier.height(8.dp))
-                Text(f.reason, fontSize = 11.5.sp, color = Color(0xFFDC2626))
+                Text(f.reason, fontSize = 11.5.sp, color = DangerRed)
                 // ★2026-11-11 失败不能是死路。
                 //   镜像和官方直链都挂了的时候（或被公司网络拦了），
                 //   用户手里还剩一条路：拿浏览器下。以前这里只有"重试"，

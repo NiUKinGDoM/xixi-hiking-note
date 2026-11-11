@@ -53,6 +53,7 @@ import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★管理云端备份（对齐 Web 版 showManageBackupsModal）
@@ -217,7 +218,7 @@ fun CloudBackupsDialog(
                             ) {
                                 Icon(
                                     Icons.Filled.Delete, "删除云端备份",
-                                    tint = Color(0xFFDC2626), modifier = Modifier.size(15.dp)
+                                    tint = DangerRed, modifier = Modifier.size(15.dp)
                                 )
                             }
                         }

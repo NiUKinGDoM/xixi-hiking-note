@@ -67,6 +67,7 @@ import com.xixi.hiking.nativeapp.data.PhotoEntity
 import com.xixi.hiking.nativeapp.data.PhotoStore
 import com.xixi.hiking.nativeapp.ui.GlassConfirm
 import dev.chrisbanes.haze.HazeState
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★★照片灯箱 —— v2（2026-11-04 重写）
@@ -523,7 +524,7 @@ private fun LightboxPill(
             .clip(RoundedCornerShape(22.dp))
             .background(
                 when {
-                    armed -> Color(0xFFDC2626).copy(alpha = 0.92f)
+                    armed -> DangerRed.copy(alpha = 0.92f)
                     danger -> Color(0xFF460F14).copy(alpha = 0.08f)
                     else -> Color.White.copy(alpha = 0.15f)
                 }

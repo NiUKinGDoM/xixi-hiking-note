@@ -64,6 +64,18 @@ val OnAccent: Color
     @androidx.compose.runtime.ReadOnlyComposable
     get() = if (LocalIsDark.current) Color(0xFF1E1B4B) else Color.White
 /**
+ * 危险色 —— 全站统一（2026-11-11 第 1 项：设计统一）
+ *
+ * 原来 `Color(0xFFDC2626)` 在 8 个文件里硬编码了 27 次：删除按钮、错误提示、
+ * 过期徽章、签名校验失败……同一个"红"写了 27 遍。改一次颜色要在整个工程搜一遍，
+ * 而且很容易漏掉一两处（比如某个弹窗里的红字还是旧色）。
+ *
+ * ⚠️ 这是普通 val，不是 @Composable getter —— 深色模式下也用同一个红，
+ *    和浅色模式的对比度都够（不随主题变）。
+ */
+val DangerRed = Color(0xFFDC2626)
+
+/**
  * ★★文字只有黑白（2026-11-02 用户要求）
  *
  * 原话：「别加那么多颜色，把现有的颜色全删掉……只需存在白色字和黑色字」。

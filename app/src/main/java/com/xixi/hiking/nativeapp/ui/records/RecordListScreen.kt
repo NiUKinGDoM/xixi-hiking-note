@@ -70,6 +70,7 @@ import com.xixi.hiking.nativeapp.ui.theme.AccentIndigo
 import com.xixi.hiking.nativeapp.ui.theme.LocalIsDark
 import dev.chrisbanes.haze.HazeState
 import com.xixi.hiking.nativeapp.ui.theme.Ink
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * 每页条数的兜底值。
@@ -803,10 +804,10 @@ private fun SmallPill(text: String, danger: Boolean = false, onClick: () -> Unit
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (danger) Color(0xFFDC2626).copy(alpha = 0.10f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f))
+            .background(if (danger) DangerRed.copy(alpha = 0.10f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.10f))
             .border(
                 1.dp,
-                if (danger) Color(0xFFDC2626).copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
+                if (danger) DangerRed.copy(alpha = 0.35f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
                 RoundedCornerShape(10.dp)
             )
             .safeClickable(onClick = onClick)
@@ -815,7 +816,7 @@ private fun SmallPill(text: String, danger: Boolean = false, onClick: () -> Unit
         Text(
             text,
             fontSize = 13.sp,
-            color = if (danger) Color(0xFFDC2626) else MaterialTheme.colorScheme.onSurface,
+            color = if (danger) DangerRed else MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium
         )
     }

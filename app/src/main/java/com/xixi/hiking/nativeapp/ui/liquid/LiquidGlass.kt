@@ -47,6 +47,7 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.xixi.hiking.nativeapp.ui.theme.LocalIsDark
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★★液态玻璃（Liquid Glass）—— 2026-11-02 换用 Kyant0/backdrop 库
@@ -807,7 +808,7 @@ fun Modifier.glassStatic(
                             // 实心红：Web `.confirm-btn-delete`
                             //   background: rgba(239,68,68,0.85); border: rgba(239,68,68,0.95); color: #fff
                             drawRoundRect(
-                                color = if (isDark) Color(0xFFDC2626).copy(alpha = 0.90f)
+                                color = if (isDark) DangerRed.copy(alpha = 0.90f)
                                 else Color(0xFFEF4444).copy(alpha = 0.85f),
                                 cornerRadius = cr
                             )
@@ -855,7 +856,7 @@ fun Modifier.glassStatic(
                             color = when {
                                 solidDanger -> Color(0xFFEF4444).copy(alpha = 0.95f)
                                 danger && isDark -> Color(0xFFF87171).copy(alpha = 0.90f)
-                                danger -> Color(0xFFDC2626).copy(alpha = 0.90f)
+                                danger -> DangerRed.copy(alpha = 0.90f)
                                 positive && isDark -> Color(0xFF4ADE80).copy(alpha = 0.55f)
                                 positive -> Color(0xFF16A34A).copy(alpha = 0.50f)
                                 // ★2026-11-04 第二次加深（用户：「边框颜色可以再深一点」）

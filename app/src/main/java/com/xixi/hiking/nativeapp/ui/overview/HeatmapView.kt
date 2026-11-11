@@ -50,6 +50,7 @@ import dev.chrisbanes.haze.HazeState
 import java.util.Calendar
 import com.xixi.hiking.nativeapp.ui.theme.Ink
 import com.xixi.hiking.nativeapp.ui.liquid.glassStatic
+import com.xixi.hiking.nativeapp.ui.theme.DangerRed
 
 /**
  * ★徒步足迹热力图（1:1 对齐 Web 版 renderHeatmap）：
@@ -277,7 +278,7 @@ fun HeatmapCard(
                                     .background(
                                         when {
                                             isRed && isDark -> Color(0xFFEF4444).copy(alpha = 0.16f)
-                                            isRed -> Color(0xFFDC2626).copy(alpha = 0.22f)
+                                            isRed -> DangerRed.copy(alpha = 0.22f)
                                             // ★普通日子必须有灰底 —— Web 版就是 rgba(148,163,184,0.15)。
                                             //   我上一版改成透明，结果整张卡只剩几个裸数字，完全不像热力图。
                                             // 0.15 叠在白卡上只有 #E8EBF3，缩略图/低亮度屏上基本看不见，
@@ -292,7 +293,7 @@ fun HeatmapCard(
                                         if (isRed) Modifier.border(
                                             1.dp,
                                             if (isDark) Color(0xFFF87171).copy(alpha = 0.40f)
-                                            else Color(0xFFDC2626).copy(alpha = 0.45f),
+                                            else DangerRed.copy(alpha = 0.45f),
                                             RoundedCornerShape(8.dp)
                                         ) else Modifier
                                     )
