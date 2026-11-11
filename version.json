@@ -1,8 +1,8 @@
 {
-  "tag": "v1.1.1.0",
-  "version": "1.1.1.0",
-  "apk": "tuxiaoji-v1.1.1.0.apk",
-  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.0/tuxiaoji-v1.1.1.0.apk",
-  "notes": "【优化】\n- 设置页内部结构整理：把一个 1700 多行的文件拆开（功能没变）\n- 以后设置项再膨胀，打包时会被拦住，不会再长成一坨",
-  "published": "2026-11-11T15:04:50"
+  "tag": "v1.1.1.1",
+  "version": "1.1.1.1",
+  "apk": "tuxiaoji-v1.1.1.1.apk",
+  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.1/tuxiaoji-v1.1.1.1.apk",
+  "notes": "【优化】\n- 设置页继续整理：关于应用那一段独立出来了（界面没变，纯粹为了让代码好维护）",
+  "published": "2026-11-11T15:28:50"
 }
