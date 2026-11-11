@@ -12,6 +12,10 @@ package com.xixi.hiking.nativeapp.ui.settings
  * 条目写"用户看得见的变化"，不写内部实现。
  */
 val NativeChangelog: List<Pair<String, String>> = listOf(
+    "v1.1.1.1" to
+        "【优化】\n" +
+        "- 设置页继续整理：关于应用那一段独立出来了（界面没变，纯粹为了让代码好维护）\n",
+
     "v1.1.1.0" to
         "【优化】\n" +
         "- 设置页内部结构整理：把一个 1700 多行的文件拆开（功能没变）\n" +

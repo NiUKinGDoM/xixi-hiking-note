@@ -38,6 +38,7 @@ EMOJI_OK = {
     "FullChangelog.kt",
     "MainActivity.kt",        # 顶栏 🏔️（与 Web 版一致）
     "SettingsScreen.kt",      # 关于卡的品牌山（与顶栏同一个 🏔️）
+    "SettingsSections.kt",    # ★2026-11-11 关于卡搬到这里，品牌山跟着过来
     "AppChrome.kt",           # 顶栏 🏔️ 迁到 TopGlassBar 后在这里
 }
 

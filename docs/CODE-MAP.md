@@ -58,16 +58,16 @@
 | `ui/records/RecordListScreen.kt` | 931 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
 | `ui/settings/AboutDialogs.kt` | 927 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
 | `ui/settings/CloudBackupsDialog.kt` | 285 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 634 |  |
+| `ui/settings/FullChangelog.kt` | 639 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
 | `ui/settings/PhotoUsageDialog.kt` | 314 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
-| `ui/settings/SettingsScreen.kt` | 1346 | `SettingsScreen` |
-| `ui/settings/SettingsSections.kt` | 64 | `AppearanceSection` |
+| `ui/settings/SettingsScreen.kt` | 1257 | `SettingsScreen` |
+| `ui/settings/SettingsSections.kt` | 206 | `AppearanceSection`、`AboutSection` |
 | `ui/settings/SettingsWidgets.kt` | 491 | `openUrl`、`AboutLink`、`ExportOpt`、`ioScope`、`InfoTile`、`StatInline`、`SettingRow`、`androidxClip` … |
 | `ui/settings/SyncConfigDialog.kt` | 193 | `SyncConfigDialog`、`ReadOnlyRow` |
 | `ui/share/ShareCardDialog.kt` | 547 | `ShareCardDialog`、`CardMetric`、`renderCardToFile`、`renderCardBitmap`、`probeFont`、`drawShareRow`、`moodText`、`weatherText` … |
 | `ui/theme/Design.kt` | 130 |  |
 | `ui/theme/Theme.kt` | 250 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24436 行**
+**合计 65 个文件、24494 行**
