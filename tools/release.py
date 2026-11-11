@@ -150,15 +150,25 @@ def purge_jsdelivr():
 
     jsDelivr 对 `@main` 分支引用最多缓存 12 小时 —— 不清的话，发完版
     用户点"检测更新"还是旧版本，得等半天。purge 接口是公开的，一个 GET 就够。
+
+    ★★2026-11-11 实测：**清一次不够**。同一个 version.json，三个边缘节点
+    可能返回三个不同版本（cdn → v1.1.1.1 / fastly → v1.1.1.2 / gcore → v1.1.1.4），
+    因为 purge 是异步传播的。所以这里连清 3 次、每次间隔 5 秒，把命中率拉高。
+    清完仍可能有个别节点滞后几十分钟 —— 影响到的是"部分用户暂时看不到新版"，
+    不会误报，可以接受。
     """
     url = ("https://purge.jsdelivr.net/gh/NiUKinGDoM/xixi-hiking-note"
            "@main/version.json")
-    try:
-        import urllib.request
-        with urllib.request.urlopen(url, timeout=10) as r:
-            print("✓ 已刷新 jsDelivr 缓存（%s）" % r.status)
-    except Exception as e:
-        print("（jsDelivr 缓存刷新失败，最多 12 小时后自然生效：%s）" % e)
+    import time as _t
+    for i in range(3):
+        try:
+            import urllib.request
+            with urllib.request.urlopen(url, timeout=10) as r:
+                print("✓ 已刷新 jsDelivr 缓存（第 %d 次，%s）" % (i + 1, r.status))
+        except Exception as e:
+            print("（第 %d 次刷新失败：%s）" % (i + 1, e))
+        if i < 2:
+            _t.sleep(5)
 
 
 def publish(env, tag, title, apk, notes, repo):
