@@ -7,6 +7,8 @@ import com.xixi.hiking.nativeapp.data.MtnMerge
 import com.xixi.hiking.nativeapp.data.RecordEntity
 import com.xixi.hiking.nativeapp.data.SecretBox
 import com.xixi.hiking.nativeapp.data.Updater
+import com.xixi.hiking.nativeapp.ui.overview.YearReviewImage
+import com.xixi.hiking.nativeapp.ui.overview.YearStats
 import com.xixi.hiking.nativeapp.data.milestoneDone
 import com.xixi.hiking.nativeapp.data.milestoneProgress
 import com.xixi.hiking.nativeapp.data.milestoneStats
@@ -227,6 +229,39 @@ class CoreLogicTest {
             "https://dav.jianguoyun.com/dav/xixi-hiking/",
             f.cloudUrlFor("https://dav.jianguoyun.com/dav", "")
         )
+    }
+
+    // ══════════════════════════════════════════════════════════
+    //  ★2026-11-11 年度回顾出图
+    //
+    //  为什么必须有这条：上一版用 GraphicsLayer 截界面，真机保存**直接失败**
+    //  （hardware bitmap 不能直接转 software 再绘制），而所有测试都是绿的 ——
+    //  因为压根没有一条测试碰过出图这条路。
+    //  现在改成纯 Canvas 绘制，这条测试至少能保证：能画出位图、尺寸对、不抛异常。
+    // ══════════════════════════════════════════════════════════
+
+    @Test
+    fun yearReviewImage_rendersWithoutCrash() {
+        val stats = YearStats(
+            year = 2026, has = true, n = 12, km = 88.5, min = 615, peaks = 5,
+            avgKm = 7.4, mostOften = "太白山", maxCnt = 3,
+            maxEl = 3767, maxElName = "太白山",
+            lines = listOf("走了 88.5 公里，去了 5 座山", "最高的一座是太白山 3767 米")
+        )
+        val bmp = YearReviewImage.render(stats, dark = false, accent = 0xFF6366F1.toInt())
+        assertTrue("出图不应为 null", bmp != null)
+        assertEquals("宽固定 1080", 1080, bmp!!.width)
+        assertEquals("高固定 1620", 1620, bmp.height)
+        assertFalse("位图必须是软件位图（hardware 的不能压缩保存）",
+            bmp.config == android.graphics.Bitmap.Config.HARDWARE)
+    }
+
+    @Test
+    fun yearReviewImage_handlesEmptyYear() {
+        // 空年份（没记录）也不能崩 —— 用户点进去年就是这样
+        val empty = YearStats(year = 2025, has = false)
+        val bmp = YearReviewImage.render(empty, dark = true, accent = 0xFF6366F1.toInt())
+        assertTrue(bmp != null)
     }
 
 }

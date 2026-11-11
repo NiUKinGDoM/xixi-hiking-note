@@ -2,9 +2,6 @@ package com.xixi.hiking.nativeapp.ui.overview
 
 import com.xixi.hiking.nativeapp.ui.safeClickable
 import com.xixi.hiking.nativeapp.ui.theme.Radii
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.layer.drawLayer
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -158,22 +157,19 @@ fun YearReviewDialog(
         corner = 22,
         maxHeightFraction = 0.80f
     ) {
-        // ★★2026-11-10 支持「存成图片」：把这一整块内容录进 GraphicsLayer，
-        //   点按钮时直接取渲染结果 —— 所见即所得，不用另画一套长图。
-        val gLayer = androidx.compose.ui.graphics.rememberGraphicsLayer()
+        // ★★2026-11-11 存图改成**独立绘制**（YearReviewImage），不再截界面。
+        //   上一版用 GraphicsLayer 录屏，真机保存直接失败：toImageBitmap() 在 GPU 下
+        //   返回 hardware bitmap，asAndroidBitmap() 之后再 Canvas 绘制会抛异常。
+        //   而且截弹窗会带上圆角/半透明玻璃/裁切边 —— 它本来就不是分享图。
         val scope = androidx.compose.runtime.rememberCoroutineScope()
         val ctx = androidx.compose.ui.platform.LocalContext.current
         val darkNow = LocalIsDark.current
+        // ★强调色先在这里取出来：AccentIndigo 是 @Composable getter，
+        //   而导出在协程里跑（非组合作用域），到那一步再读就编译不过。
+        val accentInt = AccentIndigo.toArgb()
         var saving by remember { mutableStateOf(false) }
 
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .drawWithContent {
-                    gLayer.record { this@drawWithContent.drawContent() }
-                    drawLayer(gLayer)
-                }
-        ) {
+        Column(Modifier.fillMaxWidth()) {
             // 标题 + 年份切换
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -196,6 +192,61 @@ fun YearReviewDialog(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp).safeClickable { year += 1 }
                 )
+                Spacer(Modifier.width(6.dp))
+                // ★2026-11-11 「存成图片」挪到标题行右侧。
+                //   原来放在内容末尾，被弹窗 80% 高度限制 + 底部关闭条挤掉，
+                //   用户根本点不到。放在操作行里永远可见，也不占内容高度。
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(AccentIndigo.copy(alpha = 0.10f))
+                        .safeClickable {
+                            if (saving || !cur.has) return@safeClickable
+                            saving = true
+                            scope.launch {
+                                try {
+                                    val bmp = YearReviewImage.render(
+                                        cur, darkNow, accentInt
+                                    )
+                                    if (bmp == null) {
+                                        android.widget.Toast.makeText(
+                                            ctx, "生成图片失败", android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    } else {
+                                        val ok = com.xixi.hiking.nativeapp.data.GallerySaver
+                                            .saveBitmap(ctx, bmp, "年度回顾-$year")
+                                        android.widget.Toast.makeText(
+                                            ctx,
+                                            if (ok) "已存到相册" else "保存失败，请检查相册权限",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                } catch (t: Throwable) {
+                                    android.util.Log.w("hiking", "年度回顾存图失败", t)
+                                    android.widget.Toast.makeText(
+                                        ctx, "保存失败", android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                } finally {
+                                    saving = false
+                                }
+                            }
+                        }
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.Download, null,
+                            tint = AccentIndigo,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            if (saving) "生成中" else "存图",
+                            fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                            color = AccentIndigo
+                        )
+                    }
+                }
                 Spacer(Modifier.width(8.dp))
             }
 
@@ -337,57 +388,6 @@ fun YearReviewDialog(
                     }
                 }
                 Spacer(Modifier.height(4.dp))
-            }
-
-            // ★2026-11-10 「存成图片」——
-            //   年度回顾以前只能自己看；年底那张"今年走了多少"没有出口，
-            //   而分享卡只能分享单条记录。这里补上唯一的自然传播点。
-            Spacer(Modifier.height(12.dp))
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    if (saving) "正在生成…" else "存成图片",
-                    fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold,
-                    color = AccentIndigo,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(50))
-                        .background(AccentIndigo.copy(alpha = 0.10f))
-                        .safeClickable {
-                            if (saving) return@safeClickable
-                            saving = true
-                            scope.launch {
-                                try {
-                                    val img = gLayer.toImageBitmap()
-                                    val src = img.asAndroidBitmap()
-                                    // 录下来的是玻璃卡片（背景透明），合成一层底色再存 ——
-                                    // 否则存到相册是一张透明底图，看着像坏文件。
-                                    val out = android.graphics.Bitmap.createBitmap(
-                                        src.width, src.height,
-                                        android.graphics.Bitmap.Config.ARGB_8888
-                                    )
-                                    val canvas = android.graphics.Canvas(out)
-                                    canvas.drawColor(
-                                        if (darkNow) 0xFF101A2E.toInt() else 0xFFF7F8FD.toInt()
-                                    )
-                                    canvas.drawBitmap(src, 0f, 0f, null)
-                                    val ok = com.xixi.hiking.nativeapp.data.GallerySaver
-                                        .saveBitmap(ctx, out, "年度回顾-$year")
-                                    android.widget.Toast.makeText(
-                                        ctx,
-                                        if (ok) "已存到相册" else "保存失败，请检查相册权限",
-                                        android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                } catch (t: Throwable) {
-                                    android.util.Log.w("hiking", "年度回顾存图失败", t)
-                                    android.widget.Toast.makeText(
-                                        ctx, "保存失败", android.widget.Toast.LENGTH_SHORT
-                                    ).show()
-                                } finally {
-                                    saving = false
-                                }
-                            }
-                        }
-                        .padding(horizontal = 14.dp, vertical = 7.dp)
-                )
             }
         }
     }
