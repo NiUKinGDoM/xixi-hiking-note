@@ -58,7 +58,7 @@
 | `ui/records/RecordListScreen.kt` | 932 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
 | `ui/settings/AboutDialogs.kt` | 941 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
 | `ui/settings/CloudBackupsDialog.kt` | 286 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 678 |  |
+| `ui/settings/FullChangelog.kt` | 687 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
 | `ui/settings/PhotoUsageDialog.kt` | 315 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
@@ -70,4 +70,4 @@
 | `ui/theme/Design.kt` | 130 |  |
 | `ui/theme/Theme.kt` | 262 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24726 行**
+**合计 65 个文件、24735 行**
