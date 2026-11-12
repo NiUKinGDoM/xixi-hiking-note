@@ -1,8 +1,8 @@
 {
-  "tag": "v1.1.1.6",
-  "version": "1.1.1.6",
-  "apk": "tuxiaoji-v1.1.1.6.apk",
-  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.6/tuxiaoji-v1.1.1.6.apk",
-  "notes": "【修复】\n- 上一版发得有点急：界面有改动但没跑完整检查就打包了，这版补上\n\n【说明】\n- 这版功能和界面跟 v1.1.1.5 完全一样，只是重新完整验证过一遍\n- 界面比对的「照妖镜」现在稳了：44 张截图逐像素对比，改坏一处立刻报出来",
-  "published": "2026-11-12T09:37:22"
+  "tag": "v1.1.1.7",
+  "version": "1.1.1.7",
+  "apk": "tuxiaoji-v1.1.1.7.apk",
+  "url": "https://github.com/NiUKinGDoM/xixi-hiking-note/releases/download/v1.1.1.7/tuxiaoji-v1.1.1.7.apk",
+  "notes": "【说明】\n- 这版界面和功能都没有变化，只是补了一层「跨页检查」\n\n【做了什么】\n- 新增 3 条自动检查：反复切页不崩、切页后列表还在、日历视图切走再回来不被重置\n- 这三件事以前只能靠人手动点，现在每次打包都会自动跑一遍\n- 以后再改数据流，出问题会当场被拦住，而不是等你用的时候才发现「点了没反应」",
+  "published": "2026-11-12T12:20:23"
 }
