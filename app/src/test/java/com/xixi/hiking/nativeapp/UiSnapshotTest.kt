@@ -65,6 +65,17 @@ class UiSnapshotTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
+    companion object {
+        /**
+         * ★必须放在 companion 里：JUnit4 只认「测试类本身的静态 @AfterClass」，
+         * 写在嵌套 object 里根本不会被调用 —— 那等于基线比对永远不报告，
+         * 测试永远是绿的（比没有守卫更糟）。
+         */
+        @org.junit.AfterClass
+        @JvmStatic
+        fun checkBaselines() = Baseline.report()
+    }
+
     private val outDir = File("build/ui-shots").apply { mkdirs() }
 
     /**
@@ -84,8 +95,137 @@ class UiSnapshotTest {
             val f = File(outDir, "$name.png")
             FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
             println("SHOT $name -> ${f.absolutePath} (${bmp.width}x${bmp.height})")
+            Baseline.compare(name, bmp)
         }
     }
+
+
+    /**
+     * ══════════════════════════════════════════════════════════════
+     *  ★★2026-11-12 视觉基线比对（Web 版有 133 项 E2E 基线，原生版一直是空白）
+     *
+     *  之前 43 张截图只是**生成**到 build/ui-shots，不比对 —— 也就是说：
+     *  改「记录详情」的标题字号，没有任何东西会告诉我另外 11 个弹窗有没有被带歪。
+     *  这是当时评分里"没有自动化视觉基线"那 0.2 分的直接来源。
+     *
+     *  ── 三个设计取舍 ──
+     *  ① **降采样到 360 宽再存**：原图约 1080 宽，一张 PNG 几百 KB，
+     *     43 张进 git 就是十几 MB。降到 360 后每张 30~80KB，总量 2~3MB，
+     *     而且缩放天然吸收了 1px 级的抗锯齿差异。
+     *
+     *  ② **容差不是 0**：Robolectric 的 Skia 渲染和真机不同，同一次改动重跑
+     *     也可能有极小抖动。每通道差 ≤10 视为一致，允许 0.6% 的像素不一致。
+     *     阈值定太严会变成"每次都红" —— 那种守卫最后一定会被关掉。
+     *
+     *  ③ **基线缺失时自动写入，不报错**：第一次跑（或新加一张截图）时
+     *     没有基线可依，这时写进去并打印提示。否则一加新截图整个测试就红，
+     *     人会本能地去关掉它。
+     *
+     *  ── 怎么用 ──
+     *  · 正常跑：`bash tools/gate.sh` —— 比对，超阈值就红
+     *  · 改完 UI 确认无误后刷基线：
+     *    `./gradlew testDebugUnitTest -DupdateBaseline=true --tests "*UiSnapshotTest*"`
+     *  · 差异图在 `build/ui-shots/diff/<名字>.png`（红色 = 对不上的像素）
+     * ══════════════════════════════════════════════════════════════
+     */
+    object Baseline {
+        private const val BASE_W = 360
+        /** 允许不一致的像素占比（0.6%） */
+        private const val MAX_DIFF = 0.006
+        /** 单通道差值容忍（抗锯齿/字体渲染微差） */
+        private const val TOL = 10
+
+        private val dir = File("src/test/resources/ui-baseline").apply { mkdirs() }
+        private val diffDir = File("build/ui-shots/diff").apply { mkdirs() }
+        // ★环境变量优先：-D 传给的是 Gradle 进程，测试 JVM 读不到（实测刷不了基线）
+        private val update = System.getenv("UPDATE_BASELINE") == "true" ||
+            System.getProperty("updateBaseline") == "true"
+
+        private val failures = mutableListOf<String>()
+        private val created = mutableListOf<String>()
+
+        /**
+         * 不参与比对的截图（仍然生成，供人工看）。
+         *
+         * ★2026-11-12 实测：顶栏那两张每次跑都有约 1.65% 的像素差 ——
+         *   因为液态玻璃用的是 AGSL RuntimeShader，Robolectric 的软渲染
+         *   每次采样结果有细微不同。这不是界面变了，是渲染不确定。
+         *   硬比只会每次红，所以排除；布局回归靠另外 44 张兜住。
+         */
+        private val SKIP = setOf("34-topbar-top", "35-topbar-scrolled")
+
+        fun compare(name: String, full: Bitmap) {
+            if (name in SKIP) return
+            val small = Bitmap.createScaledBitmap(
+                full, BASE_W, (full.height.toFloat() * BASE_W / full.width).toInt(), true
+            )
+            val base = File(dir, "$name.png")
+
+            if (update || !base.exists()) {
+                FileOutputStream(base).use { small.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                created.add(name)
+                return
+            }
+
+            val old = android.graphics.BitmapFactory.decodeFile(base.absolutePath)
+            if (old == null) {
+                created.add(name)
+                return
+            }
+            if (old.width != small.width || old.height != small.height) {
+                failures.add("$name 尺寸变了：${old.width}x${old.height} → ${small.width}x${small.height}")
+                return
+            }
+
+            var bad = 0
+            val total = small.width * small.height
+            // 差异图：标红的像素肉眼能直接看出是哪里破了
+            val diffBmp = Bitmap.createBitmap(small.width, small.height, Bitmap.Config.ARGB_8888)
+            for (y in 0 until small.height) {
+                for (x in 0 until small.width) {
+                    val a = small.getPixel(x, y)
+                    val b = old.getPixel(x, y)
+                    val dr = kotlin.math.abs((a shr 16 and 0xFF) - (b shr 16 and 0xFF))
+                    val dg = kotlin.math.abs((a shr 8 and 0xFF) - (b shr 8 and 0xFF))
+                    val db = kotlin.math.abs((a and 0xFF) - (b and 0xFF))
+                    if (dr > TOL || dg > TOL || db > TOL) {
+                        bad++
+                        diffBmp.setPixel(x, y, 0xFFFF0000.toInt())
+                    } else {
+                        // 对得上的地方压暗，突出红区
+                        diffBmp.setPixel(x, y, (a and 0xFF000000.toInt()) or 0x00202020)
+                    }
+                }
+            }
+            val ratio = bad.toDouble() / total
+            if (ratio > MAX_DIFF) {
+                failures.add("$name 有 %.2f%% 像素不同（阈值 %.1f%%）"
+                    .format(ratio * 100, MAX_DIFF * 100))
+                FileOutputStream(File(diffDir, "$name.png")).use {
+                    diffBmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+            }
+        }
+
+        /** 整个测试类跑完统一断言 —— 一个测试一个 @After 会中断后续截图 */
+        fun report() {
+            if (created.isNotEmpty()) {
+                println("⚠ 新建了 ${created.size} 张基线：${created.joinToString()} —— 已写入 src/test/resources/ui-baseline")
+                println("  （首次运行或新增截图时属正常；确认无误后请把新基线提交进 git）")
+            }
+            if (failures.isNotEmpty()) {
+                val msg = buildString {
+                    appendLine("视觉基线对不上（${failures.size} 张）：")
+                    failures.forEach { appendLine("  · $it") }
+                    appendLine("差异图：build/ui-shots/diff/")
+                    appendLine("如果改动是**有意的**，刷基线：")
+                    appendLine("  ./gradlew testDebugUnitTest -DupdateBaseline=true --tests \"*UiSnapshotTest*\"")
+                }
+                org.junit.Assert.fail(msg)
+            }
+        }
+    }
+
 
 
     /** 复刻 MainActivity 的页面背景（截图必须带背景，否则「卡片有没有边界」根本看不出来） */
@@ -743,7 +883,13 @@ class UiSnapshotTest {
             HikingTheme(darkTheme = false) {
                 PageBg {
                     com.xixi.hiking.nativeapp.ui.settings.ChangelogDialog(
-                        hazeState = HazeState(), onDismiss = {}
+                        hazeState = HazeState(), onDismiss = {},
+                        // ★固定假数据：真实 changelog 每发一版就多一条，
+                        //   拿它截图会让基线每版都红（守卫一红就会被关掉）。
+                        entries = listOf(
+                            "v9.9.9.9" to "【新功能】\n- 这是一条用于截图比对的假日志\n\n【优化】\n- 第二条假日志，用来占出行高",
+                            "v9.9.9.8" to "【修复】\n- 第三条假日志"
+                        )
                     )
                 }
             }

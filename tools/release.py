@@ -326,17 +326,64 @@ def main():
     apk_asset = "tuxiaoji-%s.apk" % tag
     apk_url = "https://github.com/%s/releases/download/%s/%s" % (DEFAULT_REPO, tag, apk_asset)
     write_version_json(tag, title, apk_url, notes, name)
-    purge_jsdelivr()
+    pushed = False
     if not a.no_push:
         env["GIT_TERMINAL_PROMPT"] = "0"
         if run(["git", "add", "version.json"], env=env) == 0:
             # 内容没变时 commit 会返回非 0，这不算失败
             run(["git", "commit", "-m", "版本清单：%s" % tag], env=env)
-            if run(["git", "push"], env=env) != 0:
+            pushed = run(["git", "push"], env=env) == 0
+            if not pushed:
                 print("⚠ version.json 已写好但没推上去 —— 手动 git push 一次，否则 App 读不到新版")
+
+    # ★★2026-11-12 修顺序 bug：原来 purge 写在 push **之前** ——
+    #   那样清掉缓存后 CDN 立刻回源拉取，拉到的还是**仓库里的旧文件**，
+    #   等于白清。必须等 push 成功（文件真的在仓库里了）再去清。
+    if pushed:
+        purge_jsdelivr()
+        verify_cdn(tag)
 
     print("\n✓ 发布完成：%s" % tag)
     return 0
+
+
+def verify_cdn(tag, timeout=120):
+    """
+    发版后轮询各 jsDelivr 节点，确认真的都换成新版本了。
+
+    ★为什么要这一步：2026-11-11 实测，同一个 version.json 三个节点
+    可能同时返回三个不同版本（cdn → v1.1.1.1 / fastly → v1.1.1.2 / gcore → v1.1.1.4）。
+    purge 是异步传播的，脚本"跑完了"不等于"用户能拿到新版"。
+
+    这里等到全部一致或超时，给出明确结论 —— 而不是发完就说"好了"。
+    """
+    import json
+    import time
+    import urllib.request
+
+    hosts = ["cdn.jsdelivr.net", "fastly.jsdelivr.net", "gcore.jsdelivr.net"]
+    start = time.time()
+    while time.time() - start < timeout:
+        state = {}
+        for h in hosts:
+            url = "https://%s/gh/NiUKinGDoM/xixi-hiking-note@main/version.json" % h
+            try:
+                with urllib.request.urlopen(url, timeout=8) as r:
+                    state[h] = json.load(r).get("tag", "?")
+            except Exception:
+                state[h] = "读取失败"
+        if all(v == tag for v in state.values()):
+            print("✓ CDN 已全部更新到 %s（%d 个节点，耗时 %ds）"
+                  % (tag, len(hosts), int(time.time() - start)))
+            return True
+        time.sleep(6)
+
+    stale = {k: v for k, v in state.items() if v != tag}
+    print("⚠ CDN 传播未完成，以下节点还是旧版本：")
+    for k, v in stale.items():
+        print("   %-22s %s" % (k, v))
+    print("   App 会读到旧清单（表现为「检测更新」暂时看不到新版），通常半小时内自愈。")
+    return False
 
 
 if __name__ == "__main__":

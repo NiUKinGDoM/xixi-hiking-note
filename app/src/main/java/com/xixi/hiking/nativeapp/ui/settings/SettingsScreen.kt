@@ -703,7 +703,9 @@ fun SettingsScreen(
             photoUsageTick++      // 清完缓存回来，这一行的数字要跟着变
         }
     }
-    if (showChangelog) ChangelogDialog(hazeState) { showChangelog = false }
+    // ★2026-11-12 改成命名参数：ChangelogDialog 后面多了个 entries（默认值），
+    //   尾随 lambda 会把 onDismiss 对到错的参数位置上
+    if (showChangelog) ChangelogDialog(hazeState, onDismiss = { showChangelog = false })
     if (showPrivacy) PrivacyPolicyDialog(hazeState) { showPrivacy = false }
     if (showDisclaimer) DisclaimerDialog(hazeState) { showDisclaimer = false }
     if (showSupport) SupportDialog(hazeState) { showSupport = false }

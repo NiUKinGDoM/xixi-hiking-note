@@ -56,13 +56,13 @@
 | `ui/records/RecordDetailDialog.kt` | 374 | `RecordDetailDialog`、`Pill`、`fmt1`、`fmtDur` |
 | `ui/records/RecordEditDialog.kt` | 514 | `diffLabel`、`normalizeDateInput`、`RecordEditDialog`、`displayDateTime`、`exifDateTime` |
 | `ui/records/RecordListScreen.kt` | 932 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
-| `ui/settings/AboutDialogs.kt` | 928 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
+| `ui/settings/AboutDialogs.kt` | 941 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
 | `ui/settings/CloudBackupsDialog.kt` | 286 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 662 |  |
+| `ui/settings/FullChangelog.kt` | 678 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
 | `ui/settings/PhotoUsageDialog.kt` | 315 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
-| `ui/settings/SettingsScreen.kt` | 816 | `SettingsScreen` |
+| `ui/settings/SettingsScreen.kt` | 818 | `SettingsScreen` |
 | `ui/settings/SettingsSections.kt` | 781 | `AppearanceSection`、`AboutSection`、`MiscSection`、`DataSection` |
 | `ui/settings/SettingsWidgets.kt` | 492 | `openUrl`、`AboutLink`、`ExportOpt`、`ioScope`、`InfoTile`、`StatInline`、`SettingRow`、`androidxClip` … |
 | `ui/settings/SyncConfigDialog.kt` | 193 | `SyncConfigDialog`、`ReadOnlyRow` |
@@ -70,4 +70,4 @@
 | `ui/theme/Design.kt` | 130 |  |
 | `ui/theme/Theme.kt` | 262 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24695 行**
+**合计 65 个文件、24726 行**

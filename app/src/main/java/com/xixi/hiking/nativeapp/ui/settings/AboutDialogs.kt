@@ -419,7 +419,20 @@ fun DisclaimerDialog(hazeState: HazeState, onDismiss: () -> Unit) {
  *   底部保留「关闭」。它比 Web 多的是"能翻历史"，少的是"必须滚很久"。
  */
 @Composable
-fun ChangelogDialog(hazeState: HazeState, onDismiss: () -> Unit) {
+fun ChangelogDialog(
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    /**
+     * ★2026-11-12 允许注入内容（默认就是内置日志）。
+     *
+     * 为什么加：视觉基线比对如果拿**真实 changelog** 截图，
+     * 那每发一版（changelog 必然多一条）基线就会红一次 ——
+     * 一个每版都红的守卫，最后一定会被关掉。
+     * 测试里传一份固定的假数据，基线就永久稳定，
+     * 同时照样能抓到「这个弹窗的布局/字号有没有被改坏」。
+     */
+    entries: List<Pair<String, String>> = NativeChangelog
+) {
     // 默认展开最新一版；其余折叠
     var expanded by remember { mutableStateOf(setOf(0)) }
     GlassOverlay(
@@ -444,7 +457,7 @@ fun ChangelogDialog(hazeState: HazeState, onDismiss: () -> Unit) {
                         .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        "${NativeChangelog.size} 个版本",
+                        "${entries.size} 个版本",
                         fontSize = 10.5.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -469,7 +482,7 @@ fun ChangelogDialog(hazeState: HazeState, onDismiss: () -> Unit) {
                 ) {
                     // ★2026-11-05 气味扫描：列表项没有 key，展开/收起某个版本后再刷新，
                     //   "展开的那一项"会按位置错到别的版本上。key 用版本号最稳（唯一）。
-                    itemsIndexed(NativeChangelog, key = { _, item -> item.first }) { idx, item ->
+                    itemsIndexed(entries, key = { _, item -> item.first }) { idx, item ->
                         if (idx > 0) {
                             Box(
                                 Modifier
