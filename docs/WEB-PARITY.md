@@ -104,3 +104,27 @@
 | **崩溃后启动提示** | 浏览器崩了刷新即可 | `CrashGuard` 记录 + 下次启动提示一次（内容 hash 去重） |
 | **液态玻璃真折射** | CSS `backdrop-filter` 只能模糊 | AGSL `RuntimeShader`，低端机自动降级为静态玻璃 |
 
+## iOS 支持（2026-11-12，由 Web 版实施）
+
+Web 版已按  完成 PWA 适配（commit c6bd7a8）：
+
+-  /  /  齐全
+- 安全区 11 处、禁字体自动放大 2 处、视口高度 6 处、惯性滚动 5 处
+- 自检：ioscheck 全绿 / test.js 356-0 / e2e 133-0（视觉基线零差异）
+
+**未做**：首屏 loading 骨架（需要 iPhone 实测白屏时长，Windows 上测不了）
+
+**待真机验收 6 条**：图标是否正确 / 有无地址栏 / 刘海是否切内容 /
+聚焦是否放大 / 断网能否打开 / 横屏是否崩
+
+### 与原生版的功能差（必然存在，不是 bug）
+
+| 能力 | 原生 | iOS PWA |
+|---|---|---|
+| 到点系统提醒 | ✅ AlarmManager | ❌ iOS 对 PWA 推送限制严 |
+| 照片 EXIF 填日期 | ✅ ExifInterface | ❌ iOS Safari File API 不给 |
+| 后台 / 开机自启 | ✅ | ❌ |
+| 数据落盘位置 | Room（App 沙箱） | Safari 本地存储，**清缓存即丢** |
+
+⇒ 原生版 README 的「iPhone 怎么用」已按这个差异写明。
+
