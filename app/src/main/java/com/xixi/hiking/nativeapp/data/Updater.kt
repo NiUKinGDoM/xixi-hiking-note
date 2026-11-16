@@ -62,6 +62,37 @@ object Updater {
         "https://cdn.jsdelivr.net/gh/NiUKinGDoM/xixi-hiking-note@main/version.json"
 
     /**
+     * ★★2026-11-16 多节点：单个 jsDelivr 节点的缓存可能**脏**（能读到、但是旧版本）。
+     *
+     * 实测事故：发完 v1.1.1.8 后，GitHub 仓库里已经是新版，但 fastly/gcore 两个节点
+     * 还停在 v1.1.1.7；连 purge 4 次之后甚至三个节点全变旧。
+     *
+     * 这比"读不到"更隐蔽 —— 旧数据能被正常解析，App 拿它一比就判"已是最新"，
+     * 用户永远收不到更新且**没有任何报错**。
+     *
+     * 解法：三节点轮询，任何一个给出比本机新的版本就立刻信它；
+     * 明显比本机旧的（缓存脏）跳过，不拿它下"已是最新"的结论。
+     * 三个都旧 → 返回 null，交给 GitHub API 兜底。
+     */
+    private val VERSION_HOSTS = listOf(
+        "cdn.jsdelivr.net", "fastly.jsdelivr.net", "gcore.jsdelivr.net"
+    )
+
+    /**
+     * ★★2026-11-16 第四个源：官网（Cloudflare Pages，国内直连、和 jsDelivr 完全独立）。
+     *
+     * 为什么必须有第二个独立 CDN：当天 jsDelivr 三个节点**同时**缓存了旧版本
+     * （仓库里已经是 v1.1.1.8，节点全是 v1.1.1.7），purge 4 次反而全变旧。
+     * 只要所有源都是 jsDelivr，就可能全军覆没。官网是另一套基础设施，
+     * 两个同时脏的概率极低。
+     *
+     * ⚠️ CF Pages 对不存在的路径返回「200 + 首页 HTML」（软 404）。
+     *    这里解析 JSON 会抛异常并被 catch → 自然跳过，不会误判。
+     */
+    private const val VERSION_JSON_SITE =
+        "https://xixi-hiking-site.pages.dev/version.json"
+
+    /**
      * 资产名里出现这些词才算「本应用的安装包」。
      *
      * ★★★2026-11-09 改成**英文资产名**（`tuxiaoji-v1.1.0.5.apk`），原因很硬：
@@ -138,35 +169,63 @@ object Updater {
      *         UpToDate / Update = 源可用且给出了明确结论。
      */
     private fun jsonCheck(): Result? {
-        return try {
-            // 带上小时级时间戳：jsDelivr 对 @main 分支有最长 12h 缓存，
-            // 换 URL 能让它更倾向于回源（发布脚本还会主动 purge，双保险）。
-            val url = VERSION_JSON + "?t=" + (System.currentTimeMillis() / 3_600_000L)
-            val req = Request.Builder().url(url)
-                .header("Accept", "application/json")
-                .build()
-            client.newCall(req).execute().use { res ->
-                if (!res.isSuccessful) return null
-                val txt = res.body?.string() ?: return null
-                val o = JSONObject(txt)
-                val tag = o.optString("tag", "")
-                val apkUrl = o.optString("url", "")
-                if (tag.isBlank() || apkUrl.isBlank()) return null
-                if (!isNewer(tag, currentVersion())) return Result.UpToDate
-                Result.Update(
-                    Release(
-                        tag = tag,
-                        apkUrl = apkUrl,
-                        name = o.optString("version", ""),
-                        body = o.optString("notes", ""),
-                        isBeta = false
-                    )
-                )
+        val local = currentVersion()
+        // 只要有一个节点给出的版本 == 本机，就说明至少有个节点跟上了，
+        // 可以据此下"已是最新"的结论（而不是被某个旧节点带偏）。
+        var sawCurrent = false
+
+        // 前三个是 jsDelivr 的边缘节点，第四个是官网 CF Pages（独立基础设施）
+        val urls = VERSION_HOSTS.map {
+            "https://$it/gh/NiUKinGDoM/xixi-hiking-note@main/version.json" +
+                "?t=" + (System.currentTimeMillis() / 3_600_000L)
+        } + listOf(VERSION_JSON_SITE)   // 官网 CF Pages 不加时间戳（实测带 query 对部分 UA 会 403）
+
+        for (url in urls) {
+            val host = try {
+                java.net.URI(url).host
+            } catch (e: Throwable) {
+                "unknown"
             }
-        } catch (e: Throwable) {
-            Log.i("hiking", "版本清单不可用，改用 GitHub API：${e.message}")
-            null
+            try {
+                val req = Request.Builder().url(url)
+                    .header("Accept", "application/json")
+                    .build()
+                client.newCall(req).execute().use { res ->
+                    if (!res.isSuccessful) return@use
+                    val txt = res.body?.string() ?: return@use
+                    val o = JSONObject(txt)
+                    val tag = o.optString("tag", "")
+                    val apkUrl = o.optString("url", "")
+                    if (tag.isBlank() || apkUrl.isBlank()) return@use
+
+                    // ★节点比本机新 → 立刻信，不用等其余节点
+                    if (isNewer(tag, local)) {
+                        return Result.Update(
+                            Release(
+                                tag = tag, apkUrl = apkUrl,
+                                name = o.optString("version", ""),
+                                body = o.optString("notes", ""), isBeta = false
+                            )
+                        )
+                    }
+                    // ★节点比本机旧 = 缓存脏，跳过，绝不拿它下"已是最新"
+                    if (isNewer(local, tag)) {
+                        Log.i("hiking", "$host 的版本清单是旧的($tag)，跳过")
+                        return@use
+                    }
+                    // 到这里 tag == local
+                    sawCurrent = true
+                }
+            } catch (e: Throwable) {
+                Log.i("hiking", "$host 版本清单不可用：${e.message}")
+            }
         }
+
+        // 有节点跟上当前版本 → 真的已是最新
+        if (sawCurrent) return Result.UpToDate
+        // 所有节点都比本机旧（全脏）→ 不轻信，交给 GitHub API 兜底
+        Log.i("hiking", "所有 CDN 节点的版本清单都落后，改用 GitHub API")
+        return null
     }
 
     /** 查一个仓库的发布列表，找出版本最高且比本机新的那条 */

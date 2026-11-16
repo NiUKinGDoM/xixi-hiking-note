@@ -28,7 +28,7 @@
 | `data/RelativeTime.kt` | 32 |  |
 | `data/SecretBox.kt` | 101 |  |
 | `data/Trace.kt` | 77 |  |
-| `data/Updater.kt` | 278 |  |
+| `data/Updater.kt` | 337 |  |
 | `data/WebDavClient.kt` | 509 |  |
 | `ui/AppChrome.kt` | 944 | `pillScale`、`GlassBottomBar`、`featherAlpha`、`featherBrush`、`TopGlassBar`、`FpsPill`、`rememberFps`、`rememberFpsStat` |
 | `ui/Aurora.kt` | 205 | `AuroraLayer`、`Spot`、`seg`、`smooth` |
@@ -58,7 +58,7 @@
 | `ui/records/RecordListScreen.kt` | 932 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
 | `ui/settings/AboutDialogs.kt` | 941 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
 | `ui/settings/CloudBackupsDialog.kt` | 286 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 692 |  |
+| `ui/settings/FullChangelog.kt` | 706 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
 | `ui/settings/PhotoUsageDialog.kt` | 315 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
@@ -70,4 +70,4 @@
 | `ui/theme/Design.kt` | 130 |  |
 | `ui/theme/Theme.kt` | 262 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24832 行**
+**合计 65 个文件、24905 行**

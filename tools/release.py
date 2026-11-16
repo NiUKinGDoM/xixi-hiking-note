@@ -63,8 +63,10 @@ APK = os.path.join(ROOT, "app", "build", "outputs", "apk", "release", "app-relea
 
 
 def run(cmd, **kw):
-    print("$ " + " ".join(cmd))
-    r = subprocess.run(cmd, cwd=ROOT, text=True, errors="ignore", **kw)
+    # ★2026-11-16：允许传 cwd 覆盖（官网 version.json 同步要在另一个仓库里跑 git）
+    cwd = kw.pop("cwd", ROOT)
+    print("$ " + " ".join(cmd) + ("  (in %s)" % cwd if cwd != ROOT else ""))
+    r = subprocess.run(cmd, cwd=cwd, text=True, errors="ignore", **kw)
     return r.returncode
 
 
@@ -141,6 +143,42 @@ def write_version_json(tag, name, apk_url, notes, version):
         _json.dump(data, f, ensure_ascii=False, indent=2)
         f.write("\n")
     print("✓ 已写 version.json（%s）" % tag)
+
+    # ★★2026-11-16 同步一份到官网（CF Pages），作为**独立的第四更新源**。
+    #   事故起因：jsDelivr 三个节点同时缓存旧版本，purge 无效，
+    #   App 读到旧数据判"已是最新"，用户收不到更新且不报错。
+    #   官网是另一套 CDN，两个同时脏的概率极低。
+    #
+    #   ⚠️ 官网是**另一个 git 仓库**，而且 web 版任务经常有未提交改动。
+    #      这里只 add **site/version.json 这一个文件**，绝不用 git add -A，
+    #      否则会把别人的半成品一起提交走。
+    data["source"] = "native-app"   # 标记来源，便于排查是哪份
+    site = r"C:\Users\NIU-XC\Desktop\buddy\2026-08-07-13-58-04\hiking-app3"
+    sp = os.path.join(site, "site", "version.json")
+    if os.path.isdir(site) and os.path.isdir(os.path.join(site, ".git")):
+        try:
+            with open(sp, "w", encoding="utf-8", newline="\n") as f:
+                _json.dump(data, f, ensure_ascii=False, indent=2)
+                f.write("\n")
+            env2 = dict(os.environ)
+            env2["GIT_TERMINAL_PROMPT"] = "0"
+            if run(["git", "add", "--", "site/version.json"], cwd=site, env=env2) == 0:
+                # commit 只针对这一个路径；没有变化时返回非 0，不算失败
+                c = run(["git", "commit", "-m", "同步原生版更新清单：%s" % tag,
+                         "--", "site/version.json"], cwd=site, env=env2)
+                if c == 0:
+                    if run(["git", "push", "origin", "master"], cwd=site, env=env2) == 0:
+                        print("✓ 官网 version.json 已同步并推送（CF Pages 会自动部署）")
+                    else:
+                        print("⚠ 官网 version.json 已提交但 push 失败 —— CF 不会更新，手动推一次")
+                else:
+                    print("· 官网 version.json 内容没变，跳过提交")
+        except Exception as e:
+            # 官网同步失败不该让整个发版失败 —— 还有三个 jsDelivr 节点
+            print("⚠ 官网 version.json 同步失败（不影响发版）：%s" % e)
+    else:
+        print("· 官网项目目录不存在，跳过第四源同步")
+
     return p
 
 
