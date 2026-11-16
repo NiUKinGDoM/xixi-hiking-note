@@ -3,13 +3,18 @@
 """
 版本号一致性检查（原生版「六项优化」④ 文档同步 / ⑤ 单一门禁的一部分）
 
-检查三处必须一致：
-  ① app/build.gradle.kts 的 `val vc`        —— 唯一真值
-  ② 由 vc 按公式算出的 versionName           —— 1.x.x.x
-  ③ README 的版本号规则段 + 原生版更新日志首条 —— 必须已经跟上
+检查四处必须一致：
+  ① app/build.gradle.kts 的 `val vc`          —— 唯一真值
+  ② 由 vc 按公式算出的 versionName             —— 1.x.x.x
+  ③ README 版本号规则段 + 更新日志首条          —— 必须已经跟上
+  ④ ★README 开头「原生版已迭代 N版」里的 N      —— 必须等于 vc
 
 为什么要自动化：之前 README 里写着旧版本号、更新日志停在上一版，
 每次都要靠人记。Web 版就是被这个坑过，才做了 docfresh（文档真值比对）。
+
+★第 ④ 条是 2026-11-16 补的：当时开头还写着「已迭代 135版」，而实际 vc 已经
+  140 —— bump 会同步更新日志和对照表，但**不会**改这句叙述，于是它就悄悄过期了。
+  这种"数字散落在散文里"的地方只有自动核对才靠得住。
 """
 import io
 import os
@@ -48,6 +53,20 @@ def main() -> int:
     # 对照表里必须有一行当前 vc（形如 "| 55 | 54 | **1.0.4.10** |"）
     if not re.search(r"\|\s*%d\s*\|" % vc, readme):
         problems.append("README 的版本对照表里没有 vc%d 这一行" % vc)
+
+    # ★开头「原生版已迭代 N版」里的 N 必须 = vc。
+    #   bump.py 不会改这句散文，所以它最容易悄悄过期（2026-11-16 就是 135 vs 140）。
+    #   实际写法：「这个仓库，目前已迭代**140版**」—— ** 包住整段"N版"。
+    #   只匹配"已迭代"这个连续串：web 版写的是"迭代了316版"、雏形写的是
+    #   "已经迭代过203版"，两者都不是"已迭代"，不会被误匹配。
+    m = re.search(r"已迭代\s*\*{0,2}(\d+)\s*版", readme)
+    if not m:
+        problems.append("README 开头找不到「原生版已迭代 N版」这句（格式被改坏了？）")
+    elif int(m.group(1)) != vc:
+        problems.append(
+            "README 开头写「已迭代 %s版」，但实际 vc%d —— bump 不会自动改这句，需手工同步"
+            % (m.group(1), vc)
+        )
 
     cl = io.open(CHANGELOG, encoding="utf-8").read()
     first = re.search(r'"v([\d.]+)"\s*to', cl)
