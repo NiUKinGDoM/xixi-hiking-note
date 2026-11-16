@@ -575,6 +575,8 @@ internal fun DataSection(
                 cols = 2, modifier = Modifier.weight(1f), enabled = !syncBusy
             ) {
                 if (!dav.configured) { onToast("先绑定账号") ; return@GridGlassButton }
+                // ★2026-11-16：缺密码时别发请求（BasicAuth 空密码必 401），明确提示补密码
+                if (dav.needsPassword) { onToast("先补全网盘密码") ; return@GridGlassButton }
                 if (!com.xixi.hiking.nativeapp.data.Net.isOnline(context)) {
                     onToast("离线，稍后再试") ; return@GridGlassButton
                 }
@@ -607,6 +609,7 @@ internal fun DataSection(
                 cols = 2, modifier = Modifier.weight(1f), enabled = !syncBusy
             ) {
                 if (!dav.configured) { onToast("先绑定账号") ; return@GridGlassButton }
+                if (dav.needsPassword) { onToast("先补全网盘密码") ; return@GridGlassButton }
                 if (!com.xixi.hiking.nativeapp.data.Net.isOnline(context)) {
                     onToast("离线，稍后再试") ; return@GridGlassButton
                 }
@@ -633,7 +636,49 @@ internal fun DataSection(
                 )
                 .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
-            if (!dav.configured) {
+            if (dav.needsPassword) {
+                // ★★2026-11-16 第三态：有地址账号、但没密码。
+                //   典型来源：从 Web 版导入的备份默认不带密码（为了不把应用密码
+                //   写进备份文件）。以前这里落进"已绑定"分支，绿点 + 已绑定，
+                //   同步却次次 401 —— 用户完全找不到原因。
+                //   现在明确说"缺密码"，点一下直接进配置弹窗补。
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.size(7.dp).clip(CircleShape)
+                                .background(Color(0xFFF59E0B))
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            "待补全密码", fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "地址账号已导入，但备份不带密码。同步前需填一次应用密码。",
+                        fontSize = 12.sp, lineHeight = 17.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(top = 11.dp)
+                            .liquidGlassChip(corner = 12, flat = true)
+                            .safeClickable {
+                                com.xixi.hiking.nativeapp.data.Trace.step("点击:补全密码")
+                                onShowSync(true)
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "补全密码", fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold, color = Ink
+                        )
+                    }
+                }
+            } else if (!dav.configured) {
                 // 未绑定：说明 + 主按钮
                 Column {
                     Text(
@@ -736,7 +781,12 @@ internal fun DataSection(
                 //   已配置 → 打开「同步状态」；未配置 → 打开绑定弹窗（否则点了没反应）。
                 .safeClickable {
                     com.xixi.hiking.nativeapp.data.Trace.step("点击:同步状态")
-                    if (dav.configured) onShowSyncStatus(true) else onShowSync(true)
+                    when {
+                        // 缺密码 → 进配置弹窗补，别去同步状态页（那里只会显示失败）
+                        dav.needsPassword -> onShowSync(true)
+                        dav.configured -> onShowSyncStatus(true)
+                        else -> onShowSync(true)
+                    }
                 },
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -745,15 +795,20 @@ internal fun DataSection(
                     .size(7.dp)
                     .clip(CircleShape)
                     .background(
-                        if (dav.configured) Color(0xFF22C55E)
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        when {
+                            dav.needsPassword -> Color(0xFFF59E0B)   // 缺密码：橙
+                            dav.configured -> Color(0xFF22C55E)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                        }
                     )
             )
             Spacer(Modifier.width(7.dp))
             // 读 syncTick：上传/下载完要立刻反映到这一行
             @Suppress("UNUSED_VARIABLE") val tick = syncTick
             Text(
-                if (dav.configured) {
+                if (dav.needsPassword) {
+                    "密码未补全 · 点这里填写"
+                } else if (dav.configured) {
                     runCatching {
                         val last = com.xixi.hiking.nativeapp.data.Prefs
                             .getLong(context, com.xixi.hiking.nativeapp.data.Prefs.KEY_SYNC_LAST_AT, 0L)

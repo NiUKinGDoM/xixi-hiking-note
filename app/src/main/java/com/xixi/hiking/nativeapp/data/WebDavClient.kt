@@ -22,7 +22,25 @@ object WebDavClient {
         val user: String = "",
         val pass: String = ""
     ) {
+        /**
+         * 地址 + 账号填了 = 「有配置」。
+         *
+         * ★2026-11-16 注意：这里**故意不要求密码**。备份可以只带地址账号、
+         *   不带密码（Web 版导出时默认就不带，为了不把应用密码写进备份文件）。
+         *   所以"有配置"≠"能同步"。
+         */
         val configured: Boolean get() = url.isNotBlank() && user.isNotBlank()
+
+        /**
+         * 有地址账号但缺密码 —— 同步一定会 401，必须让用户补全。
+         *
+         * 之前只有 configured 一个布尔值，导入无密码备份后就显示「已绑定」，
+         * 看着像好的、同步却次次失败，用户根本找不到原因。
+         */
+        val needsPassword: Boolean get() = configured && pass.isBlank()
+
+        /** 真·能同步：地址、账号、密码齐全 */
+        val ready: Boolean get() = configured && pass.isNotBlank()
     }
 
     fun load(ctx: Context): Config {

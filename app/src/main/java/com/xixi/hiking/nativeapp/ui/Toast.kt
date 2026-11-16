@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -86,6 +87,18 @@ fun AppToastHost() {
         }
     }
 
+    /**
+     * ★★2026-11-16 用户：「打开弹窗之后，toast 被弹窗盖住」。
+     *
+     * 真因：弹窗有两种宿主 —— 主窗口内就地画，以及嵌套时开**独立 Popup 窗口**。
+     * 独立窗口永远盖在主窗口所有内容之上。
+     *
+     * ★为什么这里**不**把 toast 也改成 Popup：
+     *   试过，真机能显示，但 `UiSnapshotTest` 是靠 `decorView.draw()` 截图的，
+     *   独立 Popup 不在 decorView 里 ⇒ 三张 toast 基线全变成空白，守卫直接失效。
+     *   为了"测试能守住"这个更重要的目标，保留主窗口绘制；
+     *   嵌套 Popup 弹窗里由 `GlassOverlay` 自己再画一个 ToastHost（见那边注释）。
+     */
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         AnimatedVisibility(
             visible = msg != null,

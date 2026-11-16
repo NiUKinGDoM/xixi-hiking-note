@@ -258,6 +258,12 @@ fun GlassOverlay(
                         participateInStack = false,
                         content = content
                     )
+                    // ★2026-11-16 用户：「打开弹窗之后 toast 被弹窗盖住」。
+                    //   嵌套弹窗是**独立 Popup 窗口**，主窗口里的 ToastHost 永远被它盖住。
+                    //   所以在这个窗口内部再画一个 —— 放在 GlassOverlayImpl 之后 = 盖在弹窗之上。
+                    //   两个 host 同时读 AppToast.message：外面那个被弹窗挡着看不见，
+                    //   里面这个可见；关掉弹窗后只剩外面那个，行为一致。
+                    com.xixi.hiking.nativeapp.ui.AppToastHost()
                 }
             }
         }

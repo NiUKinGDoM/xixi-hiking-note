@@ -29,18 +29,18 @@
 | `data/SecretBox.kt` | 101 |  |
 | `data/Trace.kt` | 77 |  |
 | `data/Updater.kt` | 278 |  |
-| `data/WebDavClient.kt` | 491 |  |
+| `data/WebDavClient.kt` | 509 |  |
 | `ui/AppChrome.kt` | 944 | `pillScale`、`GlassBottomBar`、`featherAlpha`、`featherBrush`、`TopGlassBar`、`FpsPill`、`rememberFps`、`rememberFpsStat` |
 | `ui/Aurora.kt` | 205 | `AuroraLayer`、`Spot`、`seg`、`smooth` |
 | `ui/Confetti.kt` | 115 | `ConfettiOverlay` |
 | `ui/Glass.kt` | 123 | `glassSource`、`glassPanel` |
-| `ui/GlassOverlay.kt` | 734 | `GlassOverlay`、`GlassOverlayImpl`、`OverlayBody` |
+| `ui/GlassOverlay.kt` | 740 | `GlassOverlay`、`GlassOverlayImpl`、`OverlayBody` |
 | `ui/GlassPickers.kt` | 515 | `GlassDateTimePicker`、`StepArrow`、`Stepper`、`MoodWeatherPicker`、`PickerField`、`parseToCalendar`、`emojiOf` |
 | `ui/GlassWidgets.kt` | 403 | `GlassTextField`、`GlassButton`、`GlassConfirm`、`GlassSegmented`、`FieldLabel`、`DialogTitle`、`DialogMessage`、`DialogCloseBar` |
 | `ui/GlobalSearchBar.kt` | 119 | `GlobalSearchBar` |
 | `ui/LegalConsent.kt` | 289 | `LegalConsentScreen`、`LegalLinkLine`、`buildCheckText`、`buildStateTitle` |
 | `ui/SafeTap.kt` | 147 | `safeClickable`、`safeCombinedClickable` |
-| `ui/Toast.kt` | 175 | `AppToastHost` |
+| `ui/Toast.kt` | 188 | `AppToastHost` |
 | `ui/liquid/LiquidGlass.kt` | 1402 | `LiquidBackdropHost`、`liquidGlassSurface`、`glassBar`、`LocalDark`、`glassPill`、`androidx`、`glassStatic`、`staticGlassSurface` … |
 | `ui/milestones/MilestoneListDialog.kt` | 270 | `MilestoneListDialog`、`MilestoneRow`、`MilestoneEntryCard` |
 | `ui/overview/HeatmapView.kt` | 450 | `HeatmapCard`、`DayRecordRow`、`PickChip`、`fmt1`、`fmtDuration` |
@@ -58,16 +58,16 @@
 | `ui/records/RecordListScreen.kt` | 932 | `RecordListScreen`、`RecordRow`、`RoundIconButton`、`RecordsGuideCard`、`SmallPill`、`PagerButton`、`SortHeader` |
 | `ui/settings/AboutDialogs.kt` | 941 | `Clause`、`LegalClauseCard`、`DocDialog`、`PrivacyPolicyDialog`、`DisclaimerDialog`、`ChangelogDialog`、`VersionBlock`、`parseChangelogBody` … |
 | `ui/settings/CloudBackupsDialog.kt` | 286 | `CloudBackupsDialog` |
-| `ui/settings/FullChangelog.kt` | 687 |  |
+| `ui/settings/FullChangelog.kt` | 692 |  |
 | `ui/settings/LocalBackupsDialog.kt` | 320 | `LocalBackupsDialog`、`agoText` |
 | `ui/settings/PhotoUsageDialog.kt` | 315 | `PhotoUsageDialog`、`sizeParts` |
 | `ui/settings/SettingsComponents.kt` | 412 | `indigoColor`、`SettingsGroup`、`SettingsItem`、`GlassSwitch`、`GridGlassButton` |
 | `ui/settings/SettingsScreen.kt` | 818 | `SettingsScreen` |
-| `ui/settings/SettingsSections.kt` | 781 | `AppearanceSection`、`AboutSection`、`MiscSection`、`DataSection` |
+| `ui/settings/SettingsSections.kt` | 836 | `AppearanceSection`、`AboutSection`、`MiscSection`、`DataSection` |
 | `ui/settings/SettingsWidgets.kt` | 492 | `openUrl`、`AboutLink`、`ExportOpt`、`ioScope`、`InfoTile`、`StatInline`、`SettingRow`、`androidxClip` … |
 | `ui/settings/SyncConfigDialog.kt` | 193 | `SyncConfigDialog`、`ReadOnlyRow` |
 | `ui/share/ShareCardDialog.kt` | 547 | `ShareCardDialog`、`CardMetric`、`renderCardToFile`、`renderCardBitmap`、`probeFont`、`drawShareRow`、`moodText`、`weatherText` … |
 | `ui/theme/Design.kt` | 130 |  |
 | `ui/theme/Theme.kt` | 262 | `AppTextScale`、`HikingTheme` |
 
-**合计 65 个文件、24735 行**
+**合计 65 个文件、24832 行**

@@ -12,6 +12,11 @@ package com.xixi.hiking.nativeapp.ui.settings
  * 条目写"用户看得见的变化"，不写内部实现。
  */
 val NativeChangelog: List<Pair<String, String>> = listOf(
+    "v1.1.1.8" to
+        "【修复】\n" +
+        "- 导入不带密码的云备份后，设置不再误显示「已绑定」，改成「待补全密码」并给出补全入口\n" +
+        "- 轻提示（toast）不再被弹窗盖住，弹窗里操作时也能看见反馈\n",
+
     "v1.1.1.7" to
         "【说明】\n" +
         "- 这版界面和功能都没有变化，只是补了一层「跨页检查」\n" +
