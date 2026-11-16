@@ -4,7 +4,7 @@
 
 **Made by xixi 💛**
 
-> 💡 这个项目从 **2025 年 12 月 5 日** 的一次灵光开始。在那之前，它作为雏形已经迭代过**203版**；然后网页版（浏览器 / PWA 都能用）迭代了**316版**，后来用 Kotlin + Compose 重写了 Android 端 —— 也就是这个仓库，目前已迭代**135版**。
+> 💡 这个项目从 **2025 年 12 月 5 日** 的一次灵光开始。在那之前，它作为雏形已经迭代过**203版**；然后网页版（浏览器 / PWA 都能用）迭代了**316版**，后来用 Kotlin + Compose 重写了 Android 端 —— 也就是这个仓库，目前已迭代**140版**（vc140 / v1.1.1.7）。
 > 两端共用同一套数据协议，备份可以互相导入。
 
 > 📌 当前版本以 [GitHub Releases](https://github.com/NiUKinGDoM/xixi-hiking-note/releases) 为准，每个版本都有完整的更新说明。
@@ -99,7 +99,7 @@
 ## 🧱 技术
 
 - Kotlin + **Jetpack Compose**，不是 WebView 套壳
-- **Room** 本地数据库，3 个版本迁移全部覆盖（老用户升级不会清库）
+- **Room** 本地数据库，从 v1 升到 v3 的两条迁移（1→2、2→3）全部覆盖（老用户升级不会清库）
 - 液态玻璃视觉：[Kyant0/backdrop](https://github.com/Kyant0/AndroidLiquidGlass)
 - 最低 Android 7.0（API 24），target 36
 - 包体约 6.5MB（其中中文字库占 6.7MB，**这是全站宋体正文字形的代价**，不是浪费）
@@ -114,7 +114,7 @@ bash   tools/gate.sh                        # 门禁（编译 / lint / 全量测
 python tools/release.py                     # 出包 + 自动上传 Release + 更新 version.json
 ```
 
-门禁不是走过场，目前 **143 项测试 + 8 个静态扫描**：
+门禁不是走过场，目前 **143 项测试 + 11 个静态扫描**：
 
 | 扫描 | 挡住什么 |
 |---|---|
